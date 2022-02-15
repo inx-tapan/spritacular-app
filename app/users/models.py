@@ -49,6 +49,8 @@ class CameraSetting(BaseModel):
     question_field_one = models.TextField(null=True, blank=True)
     question_field_two = models.TextField(null=True, blank=True)
 
+    is_profile_camera_settings = models.BooleanField(default=True)
+
     class Meta:
         db_table = 'camera_setting'
 

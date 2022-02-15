@@ -3,10 +3,10 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 from django.urls import path, include
-from .views import UserRegisterViewSet, ChangePasswordViewSet, LogoutViewSet
+from .views import UserRegisterViewSet, ChangePasswordViewSet, LogoutViewSet, CameraSettingsApiView
 # from rest_framework import routers
 # router = routers.DefaultRouter()
-# router.register('register', UserRegisterViewSet, basename='register')
+# router.register('camera_setting', CameraSettingsApiView, basename='camera_setting')
 # urlpatterns = router.urls
 
 urlpatterns = [
@@ -24,4 +24,7 @@ urlpatterns = [
     path('password_reset/', include('django_rest_passwordreset.urls', namespace='password_reset')),
     # Logout
     path('logout/', LogoutViewSet.as_view(), name='logout'),
+    path('camera_setting/<int:pk>/'
+         , CameraSettingsApiView.as_view({'post': 'create', 'get': 'retrieve', 'patch': 'update'}),
+         name='camera_setting'),
 ]

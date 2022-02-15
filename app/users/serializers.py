@@ -3,7 +3,7 @@ from rest_framework import serializers
 from django.core.validators import FileExtensionValidator
 from rest_framework.validators import UniqueValidator
 
-from .models import User
+from .models import User, CameraSetting
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -26,7 +26,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         queryset=User.objects.all(),
         message='user with this email already exists.',
         lookup="iexact"
-    )],)
+    )], )
     profile_image = serializers.ImageField(required=False,
                                            validators=[FileExtensionValidator(['jpg', 'tiff', 'png', 'jpeg'])])
 
@@ -72,3 +72,19 @@ class ChangePasswordSerializer(serializers.Serializer):
 
         return validate_data
 
+
+class CameraSettingSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    class Meta:
+        model = CameraSetting
+        fields = '__all__'
+
+    def create(self, validated_data):
+        camera_setting = CameraSetting.objects.create(**validated_data)
+        if not validated_data.get('observation_settings'):
+            # TODO: For differentiating camera settings in profile and settings used in observations upload form.
+            camera_setting.is_profile_camera_settings = False
+            camera_setting.save()
+
+        return camera_setting

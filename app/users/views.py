@@ -1,14 +1,15 @@
 from django.contrib.auth import login, logout
+from django.http import Http404
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import User
-from .serializers import UserRegisterSerializer, UserSerializer, ChangePasswordSerializer
+from .models import User, CameraSetting
+from .serializers import UserRegisterSerializer, UserSerializer, ChangePasswordSerializer, CameraSettingSerializer
 from .permissions import IsOwnerOrAdmin
 
 
@@ -96,7 +97,20 @@ class LogoutViewSet(APIView):
             token.blacklist()
 
             return Response(status=status.HTTP_205_RESET_CONTENT)
-        except Exception as e:
+        except Exception:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
+
+class CameraSettingsApiView(viewsets.ModelViewSet):
+    serializer_class = CameraSettingSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = CameraSetting.objects.all()
+    http_method_names = ['get', 'post', 'patch']
+
+    def get_object(self, pk=None):
+        print(f"--{self.action}")
+        try:
+            return CameraSetting.objects.get(user_id=self.request.user.id, is_profile_camera_settings=True)
+        except CameraSetting.DoesNotExist:
+            raise Http404
 
