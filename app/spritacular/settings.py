@@ -74,6 +74,10 @@ REST_FRAMEWORK = {
     )
 }
 
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5000",
+]
+
 ROOT_URLCONF = 'spritacular.urls'
 
 TEMPLATES = [

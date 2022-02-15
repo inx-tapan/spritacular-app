@@ -16,10 +16,11 @@ urlpatterns = [
     # SignUp
     path('register/', UserRegisterViewSet.as_view({'post': 'create'})),
     # User profile image upload or profile update
-    path('user_profile/<int:pk>', UserRegisterViewSet.as_view({'patch': 'profile_update', 'get': 'retrieve'}),
+    path('user_profile/<int:pk>',
+         UserRegisterViewSet.as_view({'patch': 'profile_update', 'get': 'retrieve', 'put': 'update'}),
          name='profile_retrieve_update'),
     # Change Password
-    path('change-password/', ChangePasswordViewSet.as_view(), name='change-password'),
+    path('change-password/<int:pk>/', ChangePasswordViewSet.as_view(), name='change-password'),
     # Password reset
     path('password_reset/', include('django_rest_passwordreset.urls', namespace='password_reset')),
     # Logout

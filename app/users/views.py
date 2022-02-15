@@ -1,4 +1,4 @@
-from django.contrib.auth import login, logout
+# from django.contrib.auth import login, logout
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status, generics
@@ -72,7 +72,7 @@ class ChangePasswordViewSet(APIView):
         self.check_object_permissions(request, user)
         data = request.data
         data['user'] = user
-        serializer = self.serializer_class(data=data, context={"user": pk})
+        serializer = self.serializer_class(data=data, context={"user": user})
         print("------------")
         if serializer.is_valid():
             # request.user.auth_token.delete()
