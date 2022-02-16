@@ -103,13 +103,24 @@ WSGI_APPLICATION = 'spritacular.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': config('DB_ENGINE'),
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT')
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
@@ -151,8 +162,6 @@ SIMPLE_JWT = {
 }
 
 DJANGO_REST_MULTITOKENAUTH_RESET_TOKEN_EXPIRY_TIME = float(config('DJANGO_REST_MULTITOKENAUTH_RESET_TOKEN_EXPIRY_TIME'))
-print(DJANGO_REST_MULTITOKENAUTH_RESET_TOKEN_EXPIRY_TIME)
-print(type(DJANGO_REST_MULTITOKENAUTH_RESET_TOKEN_EXPIRY_TIME))
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.0/topics/i18n/
