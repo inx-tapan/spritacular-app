@@ -1,4 +1,4 @@
-from django.contrib.auth import login, logout
+# from django.contrib.auth import login, logout
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status, generics
@@ -27,11 +27,6 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
         if self.action == 'retrieve' or self.action == 'patch' or self.action == 'profile_update':
             permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
         return [permission() for permission in permission_classes]
-
-    def list(self, request, *args, **kwargs):
-        if request.user.is_authenticated:
-            return Response('Already logged in')
-        return Response('Register Yourself', status=status.HTTP_200_OK)
 
     def create(self, request, *args, **kwargs):
         if request.user.is_authenticated:
@@ -72,12 +67,16 @@ class ChangePasswordViewSet(APIView):
         self.check_object_permissions(request, user)
         data = request.data
         data['user'] = user
-        serializer = self.serializer_class(data=data, context={"user": pk})
+        serializer = self.serializer_class(data=data, context={"user": user})
         print("------------")
         if serializer.is_valid():
             # request.user.auth_token.delete()
             # logout(request)
-            return Response({"Success": True, "message": "Password changes successfully."}, status=status.HTTP_200_OK)
+            # ----- JWT
+            # refresh_token = request.data["refresh_token"]
+            # token = RefreshToken(refresh_token)
+            # token.blacklist()
+            return Response({"Success": True, "message": "Password successfully changed."}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

@@ -22,21 +22,23 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=True)
     email = serializers.EmailField(validators=[UniqueValidator(
         queryset=User.objects.all(),
         message='user with this email already exists.',
         lookup="iexact"
     )], )
+    location = serializers.CharField(required=True)
     profile_image = serializers.ImageField(required=False,
                                            validators=[FileExtensionValidator(['jpg', 'tiff', 'png', 'jpeg'])])
 
     class Meta:
         model = User
-        fields = ('first_name', 'last_name', 'email', 'password', 'location', 'profile_image')
+        fields = ('id', 'first_name', 'last_name', 'email', 'password', 'location', 'profile_image')
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
-        print("inside create call")
         user = User.objects.create(first_name=validated_data['first_name'], last_name=validated_data['last_name'],
                                    email=validated_data['email'], location=validated_data['location'],
                                    profile_image=validated_data.get('profile_image', ''))
