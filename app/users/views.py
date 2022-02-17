@@ -77,7 +77,11 @@ class ChangePasswordViewSet(APIView):
         if serializer.is_valid():
             # request.user.auth_token.delete()
             # logout(request)
-            return Response({"Success": True, "message": "Password changes successfully."}, status=status.HTTP_200_OK)
+            # ----- JWT
+            # refresh_token = request.data["refresh_token"]
+            # token = RefreshToken(refresh_token)
+            # token.blacklist()
+            return Response({"Success": True, "message": "Password successfully changed."}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
