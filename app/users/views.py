@@ -28,11 +28,6 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
         return [permission() for permission in permission_classes]
 
-    def list(self, request, *args, **kwargs):
-        if request.user.is_authenticated:
-            return Response('Already logged in')
-        return Response('Register Yourself', status=status.HTTP_200_OK)
-
     def create(self, request, *args, **kwargs):
         if request.user.is_authenticated:
             return Response('Already logged in')
