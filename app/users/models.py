@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from .managers import CustomUserManager
@@ -22,6 +24,7 @@ class BaseModel(models.Model):
 class User(AbstractUser):
 
     username = None
+    uid = models.UUIDField(default=uuid.uuid4, unique=True)
     email = models.CharField(max_length=1024, unique=True)
     location = models.CharField(max_length=30, null=True, blank=True)
     profile_image = models.ImageField(null=True, blank=True, upload_to='profile_image')
