@@ -1,7 +1,9 @@
 from django.contrib.auth import authenticate
-from rest_framework import serializers
+from rest_framework import serializers, exceptions
 from django.core.validators import FileExtensionValidator
 from rest_framework.validators import UniqueValidator
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.utils import timezone
 
 from .models import User, CameraSetting
 
@@ -19,6 +21,39 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ('first_name', 'last_name', 'email', 'password', 'location', 'profile_image')
         extra_kwargs = {'password': {'write_only': True}}
+
+
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+
+    def validate(self, attrs):
+        # data = super().validate(attrs)
+        authenticate_kwargs = {
+            self.username_field: attrs[self.username_field],
+            "password": attrs["password"],
+        }
+        try:
+            self.user = User.objects.get(email__iexact=authenticate_kwargs["email"])
+        except User.DoesNotExist:
+            raise serializers.ValidationError({'detail': 'No active account found with the given credentials.'},
+                                              code=400)
+        if not self.user.check_password(authenticate_kwargs["password"]):
+            raise serializers.ValidationError({'detail': 'No active account found with the given credentials.'},
+                                              code=400)
+
+        data = {}
+        refresh = self.get_token(self.user)
+
+        data['refresh'] = str(refresh)
+        data['access'] = str(refresh.access_token)
+        data['id'] = self.user.id
+        data['first_name'] = self.user.first_name
+        data['last_name'] = self.user.last_name
+        data['email'] = self.user.email
+
+        self.user.last_login = timezone.now()
+        self.user.save(update_fields=['last_login'])
+
+        return data
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):

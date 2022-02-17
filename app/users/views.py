@@ -7,6 +7,9 @@ from rest_framework.response import Response
 
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework import permissions
+from .serializers import MyTokenObtainPairSerializer
 
 from .models import User, CameraSetting
 from .serializers import UserRegisterSerializer, UserSerializer, ChangePasswordSerializer, CameraSettingSerializer
@@ -47,6 +50,11 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
         user = get_object_or_404(User, pk=pk)
         self.check_object_permissions(request, user)
         return super(UserRegisterViewSet, self).partial_update(request=request, pk=pk)
+
+
+class CustomObtainTokenPairView(TokenObtainPairView):
+    # permission_classes = (permissions.AllowAny,)
+    serializer_class = MyTokenObtainPairSerializer
 
 
 class ChangePasswordViewSet(APIView):
