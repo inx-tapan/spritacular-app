@@ -35,10 +35,10 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             self.user = User.objects.get(email__iexact=authenticate_kwargs["email"])
         except User.DoesNotExist:
             raise serializers.ValidationError({'detail': 'No active account found with the given credentials.'},
-                                              code=400)
+                                              code=401)
         if not self.user.check_password(authenticate_kwargs["password"]):
             raise serializers.ValidationError({'detail': 'No active account found with the given credentials.'},
-                                              code=400)
+                                              code=401)
 
         data = {}
         refresh = self.get_token(self.user)
