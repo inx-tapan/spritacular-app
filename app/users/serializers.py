@@ -49,6 +49,12 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['first_name'] = self.user.first_name
         data['last_name'] = self.user.last_name
         data['email'] = self.user.email
+        data['location'] = self.user.location
+        data['is_first_login'] = self.user.is_first_login
+
+        if self.user.is_first_login:
+            self.user.is_first_login = False
+            self.user.save(update_fields=['is_first_login'])
 
         self.user.last_login = timezone.now()
         self.user.save(update_fields=['last_login'])
@@ -76,7 +82,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = User.objects.create(first_name=validated_data['first_name'], last_name=validated_data['last_name'],
                                    email=validated_data['email'], location=validated_data['location'],
-                                   profile_image=validated_data.get('profile_image', ''))
+                                   profile_image=validated_data.get('profile_image', ''), is_first_login=True)
         user.set_password(validated_data['password'])
         user.save()
 
