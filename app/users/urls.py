@@ -16,7 +16,7 @@ urlpatterns = [
     # SignUp
     path('register/', UserRegisterViewSet.as_view({'post': 'create'})),
     # User profile image upload or profile update
-    path('user_profile/<int:pk>',
+    path('user_profile/<int:pk>/',
          UserRegisterViewSet.as_view({'patch': 'profile_update', 'get': 'retrieve', 'put': 'update'}),
          name='profile_retrieve_update'),
     # Change Password
