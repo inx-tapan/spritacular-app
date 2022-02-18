@@ -70,7 +70,7 @@ def password_reset_token_created(sender, instance, reset_password_token, *args, 
     print(f"---->{reset_password_token.user.email}")
     send_mail(
         # title:
-        "Password Reset for {title}".format(title="Password Rest link."),
+        "Password reset link",
         # message:
         email_plaintext_message,
         # from:

@@ -27,7 +27,8 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         permission_classes = []
-        if self.action == 'retrieve' or self.action == 'patch' or self.action == 'profile_update':
+        if self.action == 'retrieve' or self.action == 'patch' or self.action == 'profile_update'\
+                or self.action == 'put':
             permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
         return [permission() for permission in permission_classes]
 
