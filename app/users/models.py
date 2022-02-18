@@ -31,6 +31,7 @@ class User(AbstractUser):
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True, null=True, blank=True)
     location_metadata = models.JSONField(null=True)
+    is_first_login = models.BooleanField(default=False)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
