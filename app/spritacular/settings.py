@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'users.apps.UsersConfig',
+    'observation.apps.ObservationConfig',
 
     # rest_framework
     'corsheaders',
