@@ -16,6 +16,7 @@ urlpatterns = [
     # SignUp
     path('register/', UserRegisterViewSet.as_view({'post': 'create'})),
     # User profile image upload or profile update
+
     path('user_profile/<int:pk>/',
          UserRegisterViewSet.as_view({'patch': 'profile_update', 'get': 'retrieve', 'put': 'update'}),
          name='profile_retrieve_update'),
@@ -28,4 +29,5 @@ urlpatterns = [
     path('camera_setting/<int:pk>/'
          , CameraSettingsApiView.as_view({'post': 'create', 'get': 'retrieve', 'patch': 'update'}),
          name='camera_setting'),
+    path('user_details/', UserRegisterViewSet.as_view({'get': 'get_user_details'}), name='user_details'),
 ]
