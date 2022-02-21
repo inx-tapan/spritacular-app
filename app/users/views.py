@@ -1,18 +1,17 @@
 # from django.contrib.auth import login, logout
 from django.http import Http404
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets, status, generics
+from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework import permissions
 from .serializers import MyTokenObtainPairSerializer
 
 from .models import User, CameraSetting
-from .serializers import UserRegisterSerializer, UserSerializer, ChangePasswordSerializer, CameraSettingSerializer
+from .serializers import UserRegisterSerializer, ChangePasswordSerializer, CameraSettingSerializer
 from .permissions import IsOwnerOrAdmin
 
 
