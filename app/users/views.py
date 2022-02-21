@@ -27,8 +27,9 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         permission_classes = []
+        print(f"ACTION {self.action}")
         if self.action == 'retrieve' or self.action == 'patch' or self.action == 'profile_update'\
-                or self.action == 'put' or self.action == 'update':
+                or self.action == 'put' or self.action == 'update' or self.action == 'get_user_details':
             permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
         return [permission() for permission in permission_classes]
 
@@ -60,6 +61,10 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
         # data = serializer_obj.update(instance, serializer_obj.validated_data)
         serializer_obj.save()
         return Response(serializer_obj.data, status=status.HTTP_200_OK)
+
+    def get_user_details(self, request, *args, **kwargs):
+        user = request.user
+        return Response(self.serializer_class(user).data, status=status.HTTP_200_OK)
 
 
 class CustomObtainTokenPairView(TokenObtainPairView):
@@ -130,4 +135,5 @@ class CameraSettingsApiView(viewsets.ModelViewSet):
             return CameraSetting.objects.get(user_id=self.request.user.id, is_profile_camera_settings=True)
         except CameraSetting.DoesNotExist:
             raise Http404
+
 
