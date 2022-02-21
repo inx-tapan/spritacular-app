@@ -4,6 +4,7 @@ from django.core.validators import FileExtensionValidator
 from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.utils import timezone
+from django.contrib.auth.password_validation import validate_password
 
 from .models import User, CameraSetting
 
@@ -73,11 +74,16 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     location = serializers.CharField(required=True)
     profile_image = serializers.ImageField(required=False,
                                            validators=[FileExtensionValidator(['jpg', 'tiff', 'png', 'jpeg'])])
+    password = serializers.CharField(style={'input_type': 'password'}, write_only=True)
 
     class Meta:
         model = User
         fields = ('id', 'first_name', 'last_name', 'email', 'password', 'location', 'profile_image')
-        extra_kwargs = {'password': {'write_only': True}}
+        # extra_kwargs = {'password': {'write_only': True}}
+
+    def validate_password(self, value):
+        validate_password(password=value, user=User)
+        return value
 
     def create(self, validated_data):
         user = User.objects.create(first_name=validated_data['first_name'], last_name=validated_data['last_name'],
@@ -93,6 +99,11 @@ class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
     confirm_password = serializers.CharField(required=True)
+
+    def validate_new_password(self, value):
+        user = self.context.get('user')
+        validate_password(password=value, user=user)
+        return value
 
     def validate(self, validate_data):
         print(f"validate: {validate_data}")
