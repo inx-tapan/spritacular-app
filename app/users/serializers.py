@@ -81,6 +81,11 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         fields = ('id', 'first_name', 'last_name', 'email', 'password', 'location', 'profile_image')
         # extra_kwargs = {'password': {'write_only': True}}
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'method' in self.context and self.context['method'] == 'PUT':
+            del self.fields['password']
+
     def validate_password(self, value):
         validate_password(password=value, user=User)
         return value
