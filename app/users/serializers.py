@@ -1,5 +1,5 @@
 from django.contrib.auth import authenticate
-from rest_framework import serializers, exceptions
+from rest_framework import serializers
 from django.core.validators import FileExtensionValidator
 from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer

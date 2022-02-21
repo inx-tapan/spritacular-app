@@ -18,7 +18,7 @@ urlpatterns = [
     # User profile image upload or profile update
 
     path('user_profile/<int:pk>/',
-         UserRegisterViewSet.as_view({'patch': 'profile_update', 'get': 'retrieve', 'put': 'update'}),
+         UserRegisterViewSet.as_view({'patch': 'profile_update', 'get': 'retrieve', 'put': 'update_user_profile'}),
          name='profile_retrieve_update'),
     # Change Password
     path('change-password/<int:pk>/', ChangePasswordViewSet.as_view(), name='change-password'),

@@ -29,7 +29,7 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
         permission_classes = []
         print(f"ACTION {self.action}")
         if self.action == 'retrieve' or self.action == 'patch' or self.action == 'profile_update'\
-                or self.action == 'put' or self.action == 'update' or self.action == 'get_user_details':
+                or self.action == 'put' or self.action == 'update_user_profile' or self.action == 'get_user_details':
             permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
         return [permission() for permission in permission_classes]
 
@@ -53,7 +53,7 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
         self.check_object_permissions(request, user)
         return super(UserRegisterViewSet, self).partial_update(request=request, pk=pk)
 
-    def update(self, request, *args, **kwargs):
+    def update_user_profile(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer_obj = self.serializer_class(instance, data=request.data,
                                                context={'request': request, 'method': 'PUT'})
