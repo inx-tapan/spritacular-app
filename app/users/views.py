@@ -17,6 +17,7 @@ from .permissions import IsOwnerOrAdmin
 
 class UserRegisterViewSet(viewsets.ModelViewSet):
     """
+    User CRUD
     User registration and profile viewset.
     for profile data retrieve method will be called.
     for profile image upload or profile data update profile_update() will be called.
@@ -27,7 +28,7 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         permission_classes = []
         if self.action == 'retrieve' or self.action == 'patch' or self.action == 'profile_update'\
-                or self.action == 'put':
+                or self.action == 'put' or self.action == 'update':
             permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
         return [permission() for permission in permission_classes]
 
@@ -50,6 +51,15 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
         user = get_object_or_404(User, pk=pk)
         self.check_object_permissions(request, user)
         return super(UserRegisterViewSet, self).partial_update(request=request, pk=pk)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer_obj = self.serializer_class(instance, data=request.data,
+                                               context={'request': request, 'method': 'PUT'})
+        serializer_obj.is_valid(raise_exception=True)
+        # data = serializer_obj.update(instance, serializer_obj.validated_data)
+        serializer_obj.save()
+        return Response(serializer_obj.data, status=status.HTTP_200_OK)
 
 
 class CustomObtainTokenPairView(TokenObtainPairView):
