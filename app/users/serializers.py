@@ -105,10 +105,10 @@ class ChangePasswordSerializer(serializers.Serializer):
     new_password = serializers.CharField(required=True)
     confirm_password = serializers.CharField(required=True)
 
-    def validate_new_password(self, value):
-        user = self.context.get('user')
-        validate_password(password=value, user=user)
-        return value
+    # def validate_new_password(self, value):
+    #     user = self.context.get('user')
+    #     validate_password(password=value, user=user)
+    #     return value
 
     def validate(self, validate_data):
         print(f"validate: {validate_data}")
@@ -119,6 +119,11 @@ class ChangePasswordSerializer(serializers.Serializer):
 
         user = authenticate(username=user.email, password=old_password)
         if user:
+            try:
+                validate_password(password=new_password, user=user)
+            except Exception as e:
+                raise serializers.ValidationError({'details': e.messages},
+                                                  code=400)
             if new_password == confirm_password:
                 user.set_password(new_password)
                 user.save()
