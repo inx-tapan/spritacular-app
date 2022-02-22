@@ -52,6 +52,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['email'] = self.user.email
         data['location'] = self.user.location
         data['is_first_login'] = self.user.is_first_login
+        data['profile_image'] = self.user.profile_image
 
         if self.user.is_first_login:
             self.user.is_first_login = False
