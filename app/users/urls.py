@@ -26,7 +26,7 @@ urlpatterns = [
     path('password_reset/', include('django_rest_passwordreset.urls', namespace='password_reset')),
     # Logout
     path('logout/', LogoutViewSet.as_view(), name='logout'),
-    path('camera_setting/<int:pk>/'
+    path('camera_setting/'
          , CameraSettingsApiView.as_view({'post': 'create', 'get': 'retrieve', 'patch': 'update'}),
          name='camera_setting'),
     path('user_details/', UserRegisterViewSet.as_view({'get': 'get_user_details'}), name='user_details'),
