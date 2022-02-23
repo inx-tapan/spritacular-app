@@ -43,13 +43,13 @@ class User(AbstractUser):
 
 class CameraSetting(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    camera_type = models.CharField(max_length=30, null=True, blank=True)
+    camera_type = models.CharField(max_length=30)
     iso = models.CharField(max_length=10, null=True, blank=True)
     shutter_speed = models.CharField(max_length=10, null=True, blank=True)
     fps = models.IntegerField(default=0, null=True, blank=True, help_text="Frames per second")
     lens_type = models.CharField(max_length=20, null=True, blank=True)
-    focal_length = models.CharField(max_length=10, null=True, blank=True)
-    aperture = models.CharField(max_length=10, null=True, blank=True)
+    focal_length = models.CharField(max_length=10)
+    aperture = models.CharField(max_length=10)
     question_field_one = models.TextField(null=True, blank=True)
     question_field_two = models.TextField(null=True, blank=True)
 
