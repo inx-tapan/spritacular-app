@@ -8,7 +8,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # path('api-auth/', include('rest_framework.urls')),
     path('api/users/', include('users.urls')),
-    path('api/observation/', include('observation.urls')),
+    path('api/observation/', include('observation.urls'))
 ]
 
 if settings.DEBUG:

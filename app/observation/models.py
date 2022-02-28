@@ -1,3 +1,6 @@
+import datetime
+
+import pytz
 from django.db import models
 from users.models import User, CameraSetting, BaseModel
 
@@ -33,9 +36,23 @@ class ObservationImageMapping(BaseModel):
     longitude = models.CharField(max_length=10)
     obs_date = models.DateField()
     obs_time = models.TimeField()
-    obs_date_time_as_per_utc = models.DateTimeField()
+    obs_date_time_as_per_utc = models.DateTimeField(null=True, blank=True)
     timezone = models.CharField(max_length=20)
     azimuth = models.CharField(max_length=10)
+
+    def set_utc(self):
+        try:
+            time_zone = pytz.timezone(self.timezone)
+            observe_time = str(self.obs_time).split(':')
+            obs_start_time = datetime.datetime.combine(self.obs_date, datetime.time(int(observe_time[0]),
+                                                                                    int(observe_time[1])))
+            start_time = time_zone.localize(obs_start_time)
+            dt_start = start_time.astimezone(pytz.utc)
+            self.obs_date_time_as_per_utc = dt_start
+            self.save(update_fields=['obs_date_time_as_per_utc'])
+        except Exception as e:
+            print(str(e))
+        return True
 
 
 # TODO: Need to think about this if it is needed or not.
