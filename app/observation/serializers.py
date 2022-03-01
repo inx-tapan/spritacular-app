@@ -6,7 +6,7 @@ from PIL import Image
 # from exif import Image
 from PIL.ExifTags import TAGS, GPSTAGS
 from .utils import dms_coordinates_to_dd_coordinates
-from .models import ObservationImageMapping, Observation
+from .models import ObservationImageMapping, Observation, Category, ObservationCategoryMapping
 from users.models import CameraSetting
 
 
@@ -64,39 +64,103 @@ class ImageMetadataSerializer(serializers.Serializer):
                 "ApertureValue": exif.get('ApertureValue')}
 
 
+class ObservationCategory(serializers.ModelSerializer):
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), many=True, required=False,
+                                                  allow_null=True)
+    is_other = serializers.BooleanField(default=False)
+    custom_category = serializers.CharField(required=False)
+
+    class Meta:
+        model = ObservationCategoryMapping
+        fields = ('category', 'is_other', 'custom_category')
+
+
 class ObservationImageSerializer(serializers.ModelSerializer):
     image = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'tiff', 'png', 'jpeg'])])
+    category_map = ObservationCategory(required=False)
 
     class Meta:
         model = ObservationImageMapping
-        fields = ('image', 'location', 'latitude', 'longitude', 'obs_date', 'obs_time', 'timezone', 'azimuth')
+        fields = ('image', 'location', 'latitude', 'longitude', 'obs_date', 'obs_time',
+                  'timezone', 'azimuth', 'category_map')
 
 
 class ObservationSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     map_data = ObservationImageSerializer(many=True)
-    camera = serializers.PrimaryKeyRelatedField(queryset=CameraSetting.objects.all())
+    camera = serializers.PrimaryKeyRelatedField(queryset=CameraSetting.objects.all(), allow_null=True, required=False)
 
     class Meta:
         model = Observation
         fields = ('user', 'image_type', 'camera', 'map_data')
 
+    def validate(self, data):
+        image_data = data.get('map_data')
+        error_field = {}
+        if self.context.get('is_draft') is None:
+            for i in image_data:
+                print(f"@@{i}@@")
+                error_field[i['image_id']] = {}
+                if not i['category_map']['category']:
+                    error_field[i['image_id']]['category'] = 'Category is a required field.'
+
+                if not i['location']:
+                    error_field[i['image_id']]['location'] = 'Location is a required field.'
+
+                if not i['longitude']:
+                    error_field[i['image_id']]['longitude'] = 'Longitude is a required field.'
+
+                if not i['latitude']:
+                    error_field[i['image_id']]['latitude'] = 'Latitude is a required field.'
+
+                if not i['timezone']:
+                    error_field[i['image_id']]['timezone'] = 'timezone is a required field.'
+
+                if not i['obs_date']:
+                    error_field[i['image_id']]['obs_date'] = 'Obs_date is a required field.'
+
+                if not i['obs_time']:
+                    error_field[i['image_id']]['obs_time'] = 'Obs_time is a required field.'
+
+                if not i['azimuth']:
+                    error_field[i['image_id']]['azimuth'] = 'Azimuth is a required field.'
+
+            if error_field:
+                raise serializers.ValidationError(error_field, code=400)
+
+            if data.get('camera') is None:
+                raise serializers.ValidationError('Equipment details not provided.', code=400)
+
+        return data
+
     def create(self, validated_data):
         print("\n-----------------------------------------------\n")
-        print(dict(validated_data))
+        print(validated_data)
         print("\n-----------------------------------------------\n")
         image_data = validated_data.pop('map_data')
         observation = None
-        if validated_data.get('image_type') == 1:
+        category_data = {}
+
+        if validated_data.get('image_type') == 1 and len(image_data) > 1:
+            raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
+
+        elif (validated_data.get('image_type') == 2 or validated_data.get('image_type') == 3) and len(image_data) > 3:
+            raise serializers.ValidationError('Number of the images should not be more than 3', code=400)
+
+        elif validated_data.get('image_type') == 3 and len(image_data) <= 3:
             observation = Observation.objects.create(**validated_data)
-            ObservationImageMapping.objects.create(**image_data[0], observation_id=observation.id)
 
-        elif validated_data.get('image_type') == 2:
-            for i, data in enumerate(image_data):
+        for i, data in enumerate(image_data):
+            if image_data[i].get('category_map'):
+                category_data = image_data[i].pop('category_map')
+
+            if validated_data.get('image_type') != 3:
                 observation = Observation.objects.create(**validated_data)
-                ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
 
-        # TODO: Image sequence
+            ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
+
+            if category_data.get('category'):
+                for tle in category_data['category']:
+                    ObservationCategoryMapping.objects.create(observation_id=observation.id, category=tle)
 
         return observation
-

@@ -16,7 +16,7 @@ class Observation(BaseModel):
         (SEQUENCE_IMAGE, 'Images sequence from video recorded.'),
     ]
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    camera = models.ForeignKey(CameraSetting, on_delete=models.CASCADE)
+    camera = models.ForeignKey(CameraSetting, on_delete=models.CASCADE, null=True, blank=True)
     image_type = models.PositiveSmallIntegerField(choices=IMAGE_TYPE, default=SINGLE_IMAGE)
     is_verified = models.BooleanField(default=False)
     is_reject = models.BooleanField(default=False)
@@ -31,14 +31,14 @@ class Observation(BaseModel):
 class ObservationImageMapping(BaseModel):
     observation = models.ForeignKey(Observation, on_delete=models.CASCADE)
     image = models.ImageField(upload_to='observation_image')
-    location = models.CharField(max_length=50)
-    latitude = models.CharField(max_length=10)
-    longitude = models.CharField(max_length=10)
-    obs_date = models.DateField()
-    obs_time = models.TimeField()
+    location = models.CharField(max_length=50, null=True, blank=True)
+    latitude = models.CharField(max_length=10, null=True, blank=True)
+    longitude = models.CharField(max_length=10, null=True, blank=True)
+    obs_date = models.DateField(null=True, blank=True)
+    obs_time = models.TimeField(null=True, blank=True)
     obs_date_time_as_per_utc = models.DateTimeField(null=True, blank=True)
-    timezone = models.CharField(max_length=20)
-    azimuth = models.CharField(max_length=10)
+    timezone = models.CharField(max_length=20, null=True, blank=True)
+    azimuth = models.CharField(max_length=10, null=True, blank=True)
 
     def set_utc(self):
         try:
@@ -102,3 +102,12 @@ class VerifyObservation(BaseModel):
     class Meta:
         db_table = 'verify_observation'
 
+
+class ObservationComment(BaseModel):
+    observation = models.ForeignKey(Observation, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    text = models.TextField()
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'observation_comment'
