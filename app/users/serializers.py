@@ -140,16 +140,26 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 class CameraSettingSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    camera_type = serializers.CharField(required=True)
+    focal_length = serializers.CharField(required=True)
+    aperture = serializers.CharField(required=True)
 
     class Meta:
         model = CameraSetting
         fields = '__all__'
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'observation_settings' in self.context and self.context.get('observation_settings'):
+            self.fields['camera_type'].required = False
+            self.fields['focal_length'].required = False
+            self.fields['aperture'].required = False
+
     def create(self, validated_data):
         camera_setting = CameraSetting.objects.create(**validated_data)
-        if validated_data.get('observation_settings'):
+        if self.context.get('observation_settings'):
             # TODO: For differentiating camera settings in profile and settings used in observations upload form.
             camera_setting.is_profile_camera_settings = False
-            camera_setting.save()
+            camera_setting.save(update_fields=['is_profile_camera_settings'])
 
         return camera_setting
