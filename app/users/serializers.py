@@ -156,10 +156,16 @@ class CameraSettingSerializer(serializers.ModelSerializer):
             self.fields['aperture'].required = False
 
     def create(self, validated_data):
-        camera_setting = CameraSetting.objects.create(**validated_data)
-        if self.context.get('observation_settings'):
-            # TODO: For differentiating camera settings in profile and settings used in observations upload form.
-            camera_setting.is_profile_camera_settings = False
-            camera_setting.save(update_fields=['is_profile_camera_settings'])
+        if CameraSetting.objects.filter(is_profile_camera_settings=True, user=validated_data.get('user')).exists():
+            profile_camera_obj = CameraSetting.objects.get(is_profile_camera_settings=True,
+                                                           user=validated_data.get('user'))
+            print(profile_camera_obj)
+            camera_setting = self.update(profile_camera_obj, validated_data)
+        else:
+            camera_setting = CameraSetting.objects.create(**validated_data)
+            if self.context.get('observation_settings'):
+                # TODO: For differentiating camera settings in profile and settings used in observations upload form.
+                camera_setting.is_profile_camera_settings = False
+                camera_setting.save(update_fields=['is_profile_camera_settings'])
 
         return camera_setting

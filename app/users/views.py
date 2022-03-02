@@ -132,16 +132,16 @@ class CameraSettingsApiView(viewsets.ModelViewSet):
     queryset = CameraSetting.objects.all()
     http_method_names = ['get', 'post', 'patch']
 
-    def get_object(self, pk=None):
-        """
-        Customizing get_object method.
-        Adding is_profile_camera_settings filter in the query.
-        :return: Authenticated user CameraSetting object if exists else 404.
-        """
-        print(f"--{self.action}")
-        try:
-            return CameraSetting.objects.get(user_id=self.request.user.id, is_profile_camera_settings=True)
-        except CameraSetting.DoesNotExist:
-            raise Http404
+    # def get_object(self, pk=None):
+    #     """
+    #     Customizing get_object method.
+    #     Adding is_profile_camera_settings filter in the query.
+    #     :return: Authenticated user CameraSetting object if exists else 404.
+    #     """
+    #     print(f"--{self.action}")
+    #     try:
+    #         return CameraSetting.objects.get(user_id=self.request.user.id, is_profile_camera_settings=True)
+    #     except CameraSetting.DoesNotExist:
+    #         raise Http404
 
 
