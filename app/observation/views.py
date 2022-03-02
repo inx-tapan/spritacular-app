@@ -1,11 +1,13 @@
 import json
 
 from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .serializers import ImageMetadataSerializer, ObservationSerializer
 from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
+from .models import Observation
 
 
 class ImageMetadataViewSet(APIView):
@@ -52,7 +54,41 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         return Response(observation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, *args, **kwargs):
-        pass
+        obs_obj = get_object_or_404(Observation, pk=kwargs.get('pk'))
+        data = json.loads(request.data['data'])
+
+        for i in request.FILES:
+            data['map_data'][int(i.split('_')[-1])]['image'] = request.FILES[i]
+
+        if obs_obj.camera is None and isinstance(data.get('camera'), dict):
+            camera_serializer = CameraSettingSerializer(data=data['camera'],
+                                                        context={'request': request, 'observation_settings': True})
+            camera_serializer.is_valid(raise_exception=True)
+            camera_id = camera_serializer.create(camera_serializer.validated_data)
+            data['camera'] = camera_id.id
+
+        elif (obs_obj.camera and obs_obj.camera.is_profile_camera_settings) and isinstance(data.get('camera'), dict):
+            camera_serializer = CameraSettingSerializer(data=data['camera'],
+                                                        context={'request': request, 'observation_settings': True})
+            camera_serializer.is_valid(raise_exception=True)
+            camera_id = camera_serializer.create(camera_serializer.validated_data)
+            data['camera'] = camera_id.id
+
+        elif (obs_obj.camera and not obs_obj.camera.is_profile_camera_settings) and isinstance(data.get('camera'), dict):
+            camera_serializer = CameraSettingSerializer(instance=obs_obj.camera, data=data['camera'],
+                                                        context={'request': request, 'observation_settings': True})
+            camera_serializer.is_valid(raise_exception=True)
+            camera_serializer.save()
+
+        obs_context = {'request': request}
+        if 'is_draft' in data:
+            obs_context['is_draft'] = True
+        observation_serializer = self.serializer_class(instance=obs_obj, data=data, context=obs_context)
+        if observation_serializer.is_valid(raise_exception=True):
+            observation_serializer.save()
+            return Response({"success": True}, status=status.HTTP_200_OK)
+
+        return Response(observation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 

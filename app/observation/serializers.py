@@ -148,6 +148,7 @@ class ObservationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Number of the images should not be more than 3', code=400)
 
         elif validated_data.get('image_type') == 3 and len(image_data) <= 3:
+            print("image sequence")
             observation = Observation.objects.create(**validated_data)
 
         for i, data in enumerate(image_data):
@@ -164,3 +165,15 @@ class ObservationSerializer(serializers.ModelSerializer):
                     ObservationCategoryMapping.objects.create(observation_id=observation.id, category=tle)
 
         return observation
+
+    def update(self, instance, validated_data):
+        image_data = validated_data.pop('map_data')
+
+        if validated_data.get('image_type') == 1 and len(image_data) > 1:
+            raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
+
+        elif validated_data.get('image_type') == 2 and len(image_data) > 1:
+            raise serializers.ValidationError('Number of the images should not be more than 1', code=400)
+
+        # TODO: submit draft or update draft
+        return instance
