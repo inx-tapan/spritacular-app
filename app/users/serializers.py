@@ -163,6 +163,6 @@ class CameraSettingSerializer(serializers.ModelSerializer):
                 camera_setting.is_profile_camera_settings = False
                 camera_setting.save(update_fields=['is_profile_camera_settings'])
 
-                return camera_setting
+            return camera_setting
         else:
             raise serializers.ValidationError({'details': 'Camera settings for this user already exists.'}, code=400)
