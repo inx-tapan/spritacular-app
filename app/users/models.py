@@ -46,7 +46,7 @@ class CameraSetting(BaseModel):
     camera_type = models.CharField(max_length=30)
     iso = models.CharField(max_length=10, null=True, blank=True)
     shutter_speed = models.CharField(max_length=10, null=True, blank=True)
-    fps = models.IntegerField(default=0, null=True, blank=True, help_text="Frames per second")
+    fps = models.CharField(max_length=10, null=True, blank=True, help_text="Frames per second")
     lens_type = models.CharField(max_length=20, null=True, blank=True)
     focal_length = models.CharField(max_length=10)
     aperture = models.CharField(max_length=10)
