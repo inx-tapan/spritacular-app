@@ -138,6 +138,9 @@ class ObservationSerializer(serializers.ModelSerializer):
         print(validated_data)
         print("\n-----------------------------------------------\n")
         image_data = validated_data.pop('map_data')
+        submit_flag = False
+        if self.context.get('is_draft') is None:
+            submit_flag = True
         observation = None
         category_data = {}
 
@@ -149,14 +152,14 @@ class ObservationSerializer(serializers.ModelSerializer):
 
         elif validated_data.get('image_type') == 3 and len(image_data) <= 3:
             print("image sequence")
-            observation = Observation.objects.create(**validated_data)
+            observation = Observation.objects.create(**validated_data, is_submit=True if submit_flag else False)
 
         for i, data in enumerate(image_data):
             if image_data[i].get('category_map'):
                 category_data = image_data[i].pop('category_map')
 
             if validated_data.get('image_type') != 3:
-                observation = Observation.objects.create(**validated_data)
+                observation = Observation.objects.create(**validated_data, is_submit=True if submit_flag else False)
 
             ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
 
@@ -168,12 +171,23 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         image_data = validated_data.pop('map_data')
+        submit_flag = False
+        if self.context.get('is_draft') is None:
+            submit_flag = True
 
         if validated_data.get('image_type') == 1 and len(image_data) > 1:
             raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
 
         elif validated_data.get('image_type') == 2 and len(image_data) > 1:
             raise serializers.ValidationError('Number of the images should not be more than 1', code=400)
+
+        # if submit
+        instance.camera_id = validated_data.get('camera')
+        instance.is_submit = True if submit_flag else False
+        instance.save()
+
+        map_obj = ObservationImageMapping.objects.get(observation=instance)
+        map_obj.objects.update(**image_data, observation=instance)
 
         # TODO: submit draft or update draft
         return instance
