@@ -12,5 +12,5 @@ Core code repo for Spritacular - TLE Citizen Science web application
     * <https://www.djangoproject.com/>
   * Django Rest Framework
     * <https://www.django-rest-framework.org/>
-* Database: Postgres/MySQl/SQLLite/(can configure in settings.py)
+* Database: PostgresSQL(can configure in settings.py)
 
