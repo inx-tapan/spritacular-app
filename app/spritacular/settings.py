@@ -78,7 +78,7 @@ REST_FRAMEWORK = {
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "http://34.205.152.253:3000/"
+    "http://34.205.152.253:3000"
 ]
 
 CORS_ALLOW_CREDENTIALS = True
