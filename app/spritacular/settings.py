@@ -210,3 +210,5 @@ AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
 AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME')
 AWS_DEFAULT_ACL = config('AWS_DEFAULT_ACL')
 AWS_S3_FILE_OVERWRITE = False  # for handling files with duplicate names
+
+FRONTEND_URL = config('FRONTEND_URL')
