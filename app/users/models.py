@@ -8,7 +8,7 @@ from django.dispatch import receiver
 from django.urls import reverse
 from django_rest_passwordreset.signals import reset_password_token_created
 from django.core.mail import send_mail
-from spritacular.settings import EMAIL_HOST_USER, FRONTEND_URL
+from spritacular.settings import EMAIL_HOST_USER
 
 
 class BaseModel(models.Model):
@@ -65,7 +65,7 @@ class CameraSetting(BaseModel):
 @receiver(reset_password_token_created)
 def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
 
-    email_plaintext_message = "{}?token={}".format(FRONTEND_URL+'/password_reset/',
+    email_plaintext_message = "{}?token={}".format('http://localhost:3000/password_reset/',
                                                    reset_password_token.key)
     print(email_plaintext_message)
     print(f"---->{reset_password_token.user.email}")

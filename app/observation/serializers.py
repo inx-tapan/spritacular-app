@@ -170,24 +170,36 @@ class ObservationSerializer(serializers.ModelSerializer):
         return observation
 
     def update(self, instance, validated_data):
+        # print("\n-----------------------------------------------\n")
+        # print(validated_data)
+        # print("\n-----------------------------------------------\n")
         image_data = validated_data.pop('map_data')
+        # print(image_data)
         submit_flag = False
         if self.context.get('is_draft') is None:
             submit_flag = True
 
-        if validated_data.get('image_type') == 1 and len(image_data) > 1:
-            raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
-
-        elif validated_data.get('image_type') == 2 and len(image_data) > 1:
-            raise serializers.ValidationError('Number of the images should not be more than 1', code=400)
+        # if validated_data.get('image_type') == 1 and len(image_data) > 1:
+        #     raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
+        #
+        # elif validated_data.get('image_type') == 2 and len(image_data) > 1:
+        #     raise serializers.ValidationError('Number of the images should not be more than 1', code=400)
 
         # if submit
-        instance.camera_id = validated_data.get('camera')
+        instance.camera = validated_data.get('camera')
         instance.is_submit = True if submit_flag else False
         instance.save()
 
         map_obj = ObservationImageMapping.objects.get(observation=instance)
-        map_obj.objects.update(**image_data, observation=instance)
+        map_obj.image = image_data[0].get('image')
+        map_obj.location = image_data[0].get('location')
+        map_obj.timezone = image_data[0].get('timezone')
+        map_obj.longitude = image_data[0].get('longitude')
+        map_obj.latitude = image_data[0].get('latitude')
+        map_obj.azimuth = image_data[0].get('azimuth')
+        map_obj.obs_date = image_data[0].get('obs_date')
+        map_obj.obs_time = image_data[0].get('obs_time')
+        map_obj.save()
 
         # TODO: submit draft or update draft
         return instance

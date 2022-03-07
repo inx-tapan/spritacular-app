@@ -80,6 +80,10 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
             camera_serializer.is_valid(raise_exception=True)
             camera_serializer.save()
 
+        elif (obs_obj.camera and not obs_obj.camera.is_profile_camera_settings) and isinstance(data.get('camera'), int):
+            # Delete the old camera setting instance.
+            pass
+
         obs_context = {'request': request}
         if 'is_draft' in data:
             obs_context['is_draft'] = True
