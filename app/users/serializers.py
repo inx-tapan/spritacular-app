@@ -140,9 +140,9 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 class CameraSettingSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    camera_type = serializers.CharField(required=True)
-    focal_length = serializers.CharField(required=True)
-    aperture = serializers.CharField(required=True)
+    # camera_type = serializers.CharField(required=True)
+    # focal_length = serializers.CharField(required=True)
+    # aperture = serializers.CharField(required=True)
 
     class Meta:
         model = CameraSetting
@@ -150,10 +150,14 @@ class CameraSettingSerializer(serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if 'observation_settings' in self.context and self.context.get('observation_settings'):
-            self.fields['camera_type'].required = False
-            self.fields['focal_length'].required = False
-            self.fields['aperture'].required = False
+        if 'observation_settings' not in self.context:
+            self.fields['camera_type'] = serializers.CharField(required=True)
+            self.fields['focal_length'] = serializers.CharField(required=True)
+            self.fields['aperture'] = serializers.CharField(required=True)
+
+            # self.fields['camera_type'].required = False
+            # self.fields['focal_length'].required = False
+            # self.fields['aperture'].required = False
 
     def create(self, validated_data):
         if not CameraSetting.objects.filter(is_profile_camera_settings=True, user=validated_data.get('user')).exists():

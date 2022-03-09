@@ -190,16 +190,28 @@ class ObservationSerializer(serializers.ModelSerializer):
         instance.is_submit = True if submit_flag else False
         instance.save()
 
-        map_obj = ObservationImageMapping.objects.get(observation=instance)
-        map_obj.image = image_data[0].get('image')
-        map_obj.location = image_data[0].get('location')
-        map_obj.timezone = image_data[0].get('timezone')
-        map_obj.longitude = image_data[0].get('longitude')
-        map_obj.latitude = image_data[0].get('latitude')
-        map_obj.azimuth = image_data[0].get('azimuth')
-        map_obj.obs_date = image_data[0].get('obs_date')
-        map_obj.obs_time = image_data[0].get('obs_time')
-        map_obj.save()
+        map_obj = ObservationImageMapping.objects.filter(observation=instance)
+        for i in map_obj:
+            i.image = image_data[i].get('image')
+            i.location = image_data[i].get('location')
+            i.timezone = image_data[i].get('timezone')
+            i.longitude = image_data[i].get('longitude')
+            i.latitude = image_data[i].get('latitude')
+            i.azimuth = image_data[i].get('azimuth')
+            i.obs_date = image_data[i].get('obs_date')
+            i.obs_time = image_data[i].get('obs_time')
+            i.save()
+
+        # map_obj = ObservationImageMapping.objects.get(observation=instance)
+        # map_obj.image = image_data[0].get('image')
+        # map_obj.location = image_data[0].get('location')
+        # map_obj.timezone = image_data[0].get('timezone')
+        # map_obj.longitude = image_data[0].get('longitude')
+        # map_obj.latitude = image_data[0].get('latitude')
+        # map_obj.azimuth = image_data[0].get('azimuth')
+        # map_obj.obs_date = image_data[0].get('obs_date')
+        # map_obj.obs_time = image_data[0].get('obs_time')
+        # map_obj.save()
 
         # TODO: submit draft or update draft
         return instance

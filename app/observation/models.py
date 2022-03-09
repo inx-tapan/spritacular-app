@@ -16,7 +16,7 @@ class Observation(BaseModel):
         (SEQUENCE_IMAGE, 'Images sequence from video recorded.'),
     ]
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    camera = models.ForeignKey(CameraSetting, on_delete=models.CASCADE, null=True, blank=True)
+    camera = models.ForeignKey(CameraSetting, on_delete=models.SET_NULL, null=True, blank=True)
     image_type = models.PositiveSmallIntegerField(choices=IMAGE_TYPE, default=SINGLE_IMAGE)
     is_verified = models.BooleanField(default=False)
     is_reject = models.BooleanField(default=False)
@@ -39,6 +39,8 @@ class ObservationImageMapping(BaseModel):
     obs_date_time_as_per_utc = models.DateTimeField(null=True, blank=True)
     timezone = models.CharField(max_length=20, null=True, blank=True)
     azimuth = models.CharField(max_length=10, null=True, blank=True)
+    is_precise_azimuth = models.BooleanField(default=False)
+    time_accuracy = models.CharField(max_length=20, null=True, blank=True)
 
     def set_utc(self):
         try:
