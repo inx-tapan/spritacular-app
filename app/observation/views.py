@@ -5,6 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from users.models import CameraSetting
 from .serializers import ImageMetadataSerializer, ObservationSerializer
 from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
@@ -59,11 +61,15 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
                 camera_serializer = CameraSettingSerializer(data=camera_data, context=obs_context)
                 camera_serializer.is_valid(raise_exception=True)
                 camera_obj = camera_serializer.save()
-                obs_id = observation_serializer.save()
                 data['camera'] = camera_obj.id
-                obs_id.camera = camera_obj
+                observation_serializer = self.serializer_class(data=data, context=obs_context)
+                observation_serializer.is_valid(raise_exception=True)
+                obs_id = observation_serializer.save()
 
             else:
+                data['camera'] = camera_data
+                observation_serializer = self.serializer_class(data=data, context=obs_context)
+                observation_serializer.is_valid(raise_exception=True)
                 obs_id = observation_serializer.save()
                 obs_id.camera_id = camera_data
             obs_id.save()
@@ -84,42 +90,47 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         for i in request.FILES:
             data['map_data'][int(i.split('_')[-1])]['image'] = request.FILES[i]
 
+        camera_data = data.pop('camera')
+
         obs_context = {'request': request, 'observation_settings': True}
         if 'is_draft' in data:
             obs_context['is_draft'] = True
 
-        if obs_obj.camera is None and isinstance(data.get('camera'), dict):
+        camera_flag = isinstance(data.get('camera'), dict)
+
+        if obs_obj.camera is None and isinstance(camera_data, dict):
             camera_serializer = CameraSettingSerializer(data=data['camera'],
                                                         context={'request': request, 'observation_settings': True})
-            camera_serializer.is_valid(raise_exception=True)
-            camera_id = camera_serializer.create(camera_serializer.validated_data)
-            data['camera'] = camera_id.id
 
-        elif (obs_obj.camera and obs_obj.camera.is_profile_camera_settings) and isinstance(data.get('camera'), dict):
-            camera_serializer = CameraSettingSerializer(data=data['camera'], context=obs_context)
-            camera_serializer.is_valid(raise_exception=True)
-            camera_id = camera_serializer.create(camera_serializer.validated_data)
-            data['camera'] = camera_id.id
+        elif (obs_obj.camera and obs_obj.camera.is_profile_camera_settings) and isinstance(camera_data, dict):
+            camera_serializer = CameraSettingSerializer(data=camera_data, context=obs_context)
 
-        elif (obs_obj.camera and not obs_obj.camera.is_profile_camera_settings) and isinstance(data.get('camera'), dict):
-            camera_serializer = CameraSettingSerializer(instance=obs_obj.camera, data=data['camera'],
+        elif (obs_obj.camera and not obs_obj.camera.is_profile_camera_settings) and isinstance(camera_data, dict):
+            camera_serializer = CameraSettingSerializer(instance=obs_obj.camera, data=camera_data,
                                                         context=obs_context)
-            camera_serializer.is_valid(raise_exception=True)
-            camera_serializer.save()
 
-        elif (obs_obj.camera and not obs_obj.camera.is_profile_camera_settings) and isinstance(data.get('camera'), int):
+        elif (obs_obj.camera and not obs_obj.camera.is_profile_camera_settings) and isinstance(camera_data, int):
             # Delete the old camera setting instance.
-            pass
+            try:
+                CameraSetting.objects.get(id=obs_obj.camera_id).delete()
+            except CameraSetting.DoesNotExist:
+                pass
 
-        obs_context = {'request': request}
-        if 'is_draft' in data:
-            obs_context['is_draft'] = True
         observation_serializer = self.serializer_class(instance=obs_obj, data=data, context=obs_context)
+
         if observation_serializer.is_valid(raise_exception=True):
-            observation_serializer.save()
+            if not camera_flag:
+                camera_serializer.is_valid(raise_exception=True)
+                obs_obj = observation_serializer.save()
+                camera_obj = camera_serializer.save()
+                obs_obj.camera = camera_obj
+            else:
+                obs_obj = observation_serializer.save()
+                obs_obj.camera = camera_data
+            obs_obj.save()
+
             return Response({"success": True}, status=status.HTTP_200_OK)
 
         return Response(observation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 

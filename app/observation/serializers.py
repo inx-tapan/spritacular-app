@@ -98,35 +98,44 @@ class ObservationSerializer(serializers.ModelSerializer):
     def validate(self, data):
         image_data = data.get('map_data')
         error_field = {}
+        is_error_flag = False
         if self.context.get('is_draft') is None:
-            for i in image_data:
+            for count, i in enumerate(image_data):
                 print(f"@@{i}@@")
-                error_field[i['image_id']] = {}
+                error_field[count] = {}
                 if not i['category_map']['category']:
-                    error_field[i['image_id']]['category'] = FIELD_REQUIRED.format("Category")
+                    is_error_flag = True
+                    error_field[count]['category'] = FIELD_REQUIRED.format("Category")
 
                 elif not i['location']:
-                    error_field[i['image_id']]['location'] = FIELD_REQUIRED.format("Location")
+                    is_error_flag = True
+                    error_field[count]['location'] = FIELD_REQUIRED.format("Location")
 
                 elif not i['longitude']:
-                    error_field[i['image_id']]['longitude'] = FIELD_REQUIRED.format("Longitude")
+                    is_error_flag = True
+                    error_field[count]['longitude'] = FIELD_REQUIRED.format("Longitude")
 
                 elif not i['latitude']:
-                    error_field[i['image_id']]['latitude'] = FIELD_REQUIRED.format("Latitude")
+                    is_error_flag = True
+                    error_field[count]['latitude'] = FIELD_REQUIRED.format("Latitude")
 
                 elif not i['timezone']:
-                    error_field[i['image_id']]['timezone'] = FIELD_REQUIRED.format("Timezone")
+                    is_error_flag = True
+                    error_field[count]['timezone'] = FIELD_REQUIRED.format("Timezone")
 
                 elif not i['obs_date']:
-                    error_field[i['image_id']]['obs_date'] = FIELD_REQUIRED.format("Obs_date")
+                    is_error_flag = True
+                    error_field[count]['obs_date'] = FIELD_REQUIRED.format("Obs_date")
 
                 elif not i['obs_time']:
-                    error_field[i['image_id']]['obs_time'] = FIELD_REQUIRED.format("Obs_time")
+                    is_error_flag = True
+                    error_field[count]['obs_time'] = FIELD_REQUIRED.format("Obs_time")
 
                 elif not i['azimuth']:
-                    error_field[i['image_id']]['azimuth'] = FIELD_REQUIRED.format("Azimuth")
+                    is_error_flag = True
+                    error_field[count]['azimuth'] = FIELD_REQUIRED.format("Azimuth")
 
-            if error_field:
+            if is_error_flag:
                 raise serializers.ValidationError(error_field, code=400)
 
             # if data.get('camera') is None:
@@ -139,9 +148,6 @@ class ObservationSerializer(serializers.ModelSerializer):
         # print(validated_data)
         # print("\n-----------------------------------------------\n")
         image_data = validated_data.pop('map_data')
-        # submit_flag = False
-        # if self.context.get('is_draft') is None:
-        #     submit_flag = True
         submit_flag = self.context.get('is_draft') is None
         observation = None
         category_data = {}
@@ -149,7 +155,7 @@ class ObservationSerializer(serializers.ModelSerializer):
         if validated_data.get('image_type') == 1 and len(image_data) > 1:
             raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
 
-        elif (validated_data.get('image_type') or validated_data.get('image_type')) and len(image_data) > 3:
+        elif (validated_data.get('image_type') == 2 or validated_data.get('image_type') == 3) and len(image_data) > 3:
             raise serializers.ValidationError('Number of the images should not be more than 3', code=400)
 
         elif validated_data.get('image_type') == 3 and len(image_data) <= 3:
@@ -174,46 +180,35 @@ class ObservationSerializer(serializers.ModelSerializer):
         # print(validated_data)
         # print("\n-----------------------------------------------\n")
         image_data = validated_data.pop('map_data')
-        # print(image_data)
-        # submit_flag = False
-        # if self.context.get('is_draft') is None:
-        #     submit_flag = True
-
         submit_flag = self.context.get('is_draft') is None
 
-        # if validated_data.get('image_type') == 1 and len(image_data) > 1:
-        #     raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
-        #
-        # elif validated_data.get('image_type') == 2 and len(image_data) > 1:
-        #     raise serializers.ValidationError('Number of the images should not be more than 1', code=400)
+        if validated_data.get('image_type') == 1 and len(image_data) > 1:
+            raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
+
+        elif validated_data.get('image_type') == 2 and len(image_data) > 1:
+            raise serializers.ValidationError('Number of the images should not be more than 1', code=400)
 
         # if submit
-        instance.camera = validated_data.get('camera')
         instance.is_submit = submit_flag
         instance.save()
 
-        map_obj = ObservationImageMapping.objects.filter(observation=instance)
-        for i in map_obj:
-            i.image = image_data[i].get('image')
-            i.location = image_data[i].get('location')
-            i.timezone = image_data[i].get('timezone')
-            i.longitude = image_data[i].get('longitude')
-            i.latitude = image_data[i].get('latitude')
-            i.azimuth = image_data[i].get('azimuth')
-            i.obs_date = image_data[i].get('obs_date')
-            i.obs_time = image_data[i].get('obs_time')
-            i.save()
+        category_data = image_data[0].get('category_map')
+        ObservationCategoryMapping.objects.filter(observation=instance).delete()
 
-        # map_obj = ObservationImageMapping.objects.get(observation=instance)
-        # map_obj.image = image_data[0].get('image')
-        # map_obj.location = image_data[0].get('location')
-        # map_obj.timezone = image_data[0].get('timezone')
-        # map_obj.longitude = image_data[0].get('longitude')
-        # map_obj.latitude = image_data[0].get('latitude')
-        # map_obj.azimuth = image_data[0].get('azimuth')
-        # map_obj.obs_date = image_data[0].get('obs_date')
-        # map_obj.obs_time = image_data[0].get('obs_time')
-        # map_obj.save()
+        for tle in category_data.get('category'):
+            ObservationCategoryMapping.objects.create(observation_id=instance.id, category=tle)
+
+        map_obj = ObservationImageMapping.objects.filter(observation=instance).order_by('pk')
+        for i in map_obj:
+            i.image = image_data[0].get('image')
+            i.location = image_data[0].get('location')
+            i.timezone = image_data[0].get('timezone')
+            i.longitude = image_data[0].get('longitude')
+            i.latitude = image_data[0].get('latitude')
+            i.azimuth = image_data[0].get('azimuth')
+            i.obs_date = image_data[0].get('obs_date')
+            i.obs_time = image_data[0].get('obs_time')
+            i.save()
 
         # TODO: submit draft or update draft
         return instance
