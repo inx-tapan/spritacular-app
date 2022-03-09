@@ -49,7 +49,8 @@ class CameraSetting(BaseModel):
     fps = models.CharField(max_length=10, null=True, blank=True, help_text="Frames per second")
     lens_type = models.CharField(max_length=20, null=True, blank=True)
     focal_length = models.CharField(max_length=10, null=True, blank=True)
-    aperture = models.CharField(max_length=10, null=True, blank=True)
+    # aperture = models.CharField(max_length=10, null=True, blank=True)
+    aperture = models.FloatField(null=True, blank=True)
     question_field_one = models.TextField(null=True, blank=True)
     question_field_two = models.TextField(null=True, blank=True)
 

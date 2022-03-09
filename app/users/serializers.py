@@ -153,7 +153,7 @@ class CameraSettingSerializer(serializers.ModelSerializer):
         if 'observation_settings' not in self.context:
             self.fields['camera_type'] = serializers.CharField(required=True)
             self.fields['focal_length'] = serializers.CharField(required=True)
-            self.fields['aperture'] = serializers.CharField(required=True)
+            self.fields['aperture'] = serializers.FloatField(required=True)
 
             # self.fields['camera_type'].required = False
             # self.fields['focal_length'].required = False
@@ -161,7 +161,21 @@ class CameraSettingSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         if not CameraSetting.objects.filter(is_profile_camera_settings=True, user=validated_data.get('user')).exists():
-            camera_setting = CameraSetting.objects.create(**validated_data)
+            camera_type = validated_data.get('camera_type')
+            iso = validated_data.get('iso')
+            shutter_speed = validated_data.get('shutter_speed')
+            fps = validated_data.get('fps')
+            lens_type = validated_data.get('lens_type')
+            focal_length = validated_data.get('focal_length')
+            aperture = validated_data.get('aperture', None)
+            question_field_one = validated_data.get('question_field_one')
+            question_field_two = validated_data.get('question_field_two')
+
+            camera_setting = CameraSetting.objects.create(camera_type=camera_type, iso=iso, shutter_speed=shutter_speed,
+                                                          fps=fps, lens_type=lens_type, focal_length=focal_length,
+                                                          aperture=aperture, question_field_one=question_field_one,
+                                                          question_field_two=question_field_two)
+
             if self.context.get('observation_settings'):
                 # TODO: For differentiating camera settings in profile and settings used in observations upload form.
                 camera_setting.is_profile_camera_settings = False

@@ -36,13 +36,13 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
             data['map_data'][int(i.split('_')[-1])]['image'] = request.FILES[i]
 
         print(f"DATA {data}")
-        if isinstance(data.get('camera'), dict):
-            camera_serializer = CameraSettingSerializer(data=data['camera'],
-                                                        context={'request': request, 'observation_settings': True})
-            camera_serializer.is_valid(raise_exception=True)
-            camera_id = camera_serializer.create(camera_serializer.validated_data)
-            data['camera'] = camera_id.id
-
+        # if isinstance(data.get('camera'), dict):
+        #     camera_serializer = CameraSettingSerializer(data=data['camera'],
+        #                                                 context={'request': request, 'observation_settings': True})
+        #     camera_serializer.is_valid(raise_exception=True)
+        #     camera_id = camera_serializer.create(camera_serializer.validated_data)
+        #     data['camera'] = camera_id.id
+        camera_data = data.pop('camera')
         obs_context = {'request': request}
         if 'is_draft' in data:
             obs_context['is_draft'] = True

@@ -8,6 +8,7 @@ from PIL.ExifTags import TAGS, GPSTAGS
 from .utils import dms_coordinates_to_dd_coordinates
 from .models import ObservationImageMapping, Observation, Category, ObservationCategoryMapping
 from users.models import CameraSetting
+from constants import FIELD_REQUIRED
 
 
 class ImageMetadataSerializer(serializers.Serializer):
@@ -102,28 +103,28 @@ class ObservationSerializer(serializers.ModelSerializer):
                 print(f"@@{i}@@")
                 error_field[i['image_id']] = {}
                 if not i['category_map']['category']:
-                    error_field[i['image_id']]['category'] = 'Category is a required field.'
+                    error_field[i['image_id']]['category'] = FIELD_REQUIRED.format("Category")
 
                 if not i['location']:
-                    error_field[i['image_id']]['location'] = 'Location is a required field.'
+                    error_field[i['image_id']]['location'] = FIELD_REQUIRED.format("Location")
 
                 if not i['longitude']:
-                    error_field[i['image_id']]['longitude'] = 'Longitude is a required field.'
+                    error_field[i['image_id']]['longitude'] = FIELD_REQUIRED.format("Longitude")
 
                 if not i['latitude']:
-                    error_field[i['image_id']]['latitude'] = 'Latitude is a required field.'
+                    error_field[i['image_id']]['latitude'] = FIELD_REQUIRED.format("Latitude")
 
                 if not i['timezone']:
-                    error_field[i['image_id']]['timezone'] = 'timezone is a required field.'
+                    error_field[i['image_id']]['timezone'] = FIELD_REQUIRED.format("Timezone")
 
                 if not i['obs_date']:
-                    error_field[i['image_id']]['obs_date'] = 'Obs_date is a required field.'
+                    error_field[i['image_id']]['obs_date'] = FIELD_REQUIRED.format("Obs_date")
 
                 if not i['obs_time']:
-                    error_field[i['image_id']]['obs_time'] = 'Obs_time is a required field.'
+                    error_field[i['image_id']]['obs_time'] = FIELD_REQUIRED.format("Obs_time")
 
                 if not i['azimuth']:
-                    error_field[i['image_id']]['azimuth'] = 'Azimuth is a required field.'
+                    error_field[i['image_id']]['azimuth'] = FIELD_REQUIRED.format("Azimuth")
 
             if error_field:
                 raise serializers.ValidationError(error_field, code=400)
