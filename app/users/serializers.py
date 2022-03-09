@@ -150,14 +150,10 @@ class CameraSettingSerializer(serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if 'observation_settings' not in self.context:
+        if 'observation_settings' not in self.context or 'is_draft' not in self.context:
             self.fields['camera_type'] = serializers.CharField(required=True)
             self.fields['focal_length'] = serializers.CharField(required=True)
             self.fields['aperture'] = serializers.FloatField(required=True)
-
-            # self.fields['camera_type'].required = False
-            # self.fields['focal_length'].required = False
-            # self.fields['aperture'].required = False
 
     def create(self, validated_data):
         if not CameraSetting.objects.filter(is_profile_camera_settings=True, user=validated_data.get('user')).exists():
@@ -170,11 +166,12 @@ class CameraSettingSerializer(serializers.ModelSerializer):
             aperture = validated_data.get('aperture', None)
             question_field_one = validated_data.get('question_field_one')
             question_field_two = validated_data.get('question_field_two')
+            user = validated_data.get('user')
 
             camera_setting = CameraSetting.objects.create(camera_type=camera_type, iso=iso, shutter_speed=shutter_speed,
                                                           fps=fps, lens_type=lens_type, focal_length=focal_length,
                                                           aperture=aperture, question_field_one=question_field_one,
-                                                          question_field_two=question_field_two)
+                                                          question_field_two=question_field_two, user=user)
 
             if self.context.get('observation_settings'):
                 # TODO: For differentiating camera settings in profile and settings used in observations upload form.

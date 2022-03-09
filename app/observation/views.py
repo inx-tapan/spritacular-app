@@ -1,5 +1,6 @@
 import json
 
+from django.http import Http404
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
@@ -36,29 +37,56 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
             data['map_data'][int(i.split('_')[-1])]['image'] = request.FILES[i]
 
         print(f"DATA {data}")
+
         # if isinstance(data.get('camera'), dict):
         #     camera_serializer = CameraSettingSerializer(data=data['camera'],
         #                                                 context={'request': request, 'observation_settings': True})
         #     camera_serializer.is_valid(raise_exception=True)
         #     camera_id = camera_serializer.create(camera_serializer.validated_data)
         #     data['camera'] = camera_id.id
+
         camera_data = data.pop('camera')
-        obs_context = {'request': request}
+
+        obs_context = {'request': request, 'observation_settings': True}
         if 'is_draft' in data:
             obs_context['is_draft'] = True
+
         observation_serializer = self.serializer_class(data=data, context=obs_context)
+
         if observation_serializer.is_valid(raise_exception=True):
-            obs_id = observation_serializer.save()
+
+            if isinstance(camera_data, dict):
+                camera_serializer = CameraSettingSerializer(data=camera_data, context=obs_context)
+                camera_serializer.is_valid(raise_exception=True)
+                camera_obj = camera_serializer.save()
+                obs_id = observation_serializer.save()
+                data['camera'] = camera_obj.id
+                obs_id.camera = camera_obj
+
+            else:
+                obs_id = observation_serializer.save()
+                obs_id.camera_id = camera_data
+            obs_id.save()
+
             return Response({'id': obs_id.id}, status=status.HTTP_201_CREATED)
 
         return Response(observation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, *args, **kwargs):
-        obs_obj = get_object_or_404(Observation, pk=kwargs.get('pk'))
+        # obs_obj = get_object_or_404(Observation, pk=kwargs.get('pk'))
+        try:
+            obs_obj = Observation.objects.get(pk=kwargs.get('pk'), is_submit=False)
+        except Observation.DoesNotExist:
+            raise Http404
+
         data = json.loads(request.data['data'])
 
         for i in request.FILES:
             data['map_data'][int(i.split('_')[-1])]['image'] = request.FILES[i]
+
+        obs_context = {'request': request, 'observation_settings': True}
+        if 'is_draft' in data:
+            obs_context['is_draft'] = True
 
         if obs_obj.camera is None and isinstance(data.get('camera'), dict):
             camera_serializer = CameraSettingSerializer(data=data['camera'],
@@ -68,15 +96,14 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
             data['camera'] = camera_id.id
 
         elif (obs_obj.camera and obs_obj.camera.is_profile_camera_settings) and isinstance(data.get('camera'), dict):
-            camera_serializer = CameraSettingSerializer(data=data['camera'],
-                                                        context={'request': request, 'observation_settings': True})
+            camera_serializer = CameraSettingSerializer(data=data['camera'], context=obs_context)
             camera_serializer.is_valid(raise_exception=True)
             camera_id = camera_serializer.create(camera_serializer.validated_data)
             data['camera'] = camera_id.id
 
         elif (obs_obj.camera and not obs_obj.camera.is_profile_camera_settings) and isinstance(data.get('camera'), dict):
             camera_serializer = CameraSettingSerializer(instance=obs_obj.camera, data=data['camera'],
-                                                        context={'request': request, 'observation_settings': True})
+                                                        context=obs_context)
             camera_serializer.is_valid(raise_exception=True)
             camera_serializer.save()
 

@@ -105,68 +105,67 @@ class ObservationSerializer(serializers.ModelSerializer):
                 if not i['category_map']['category']:
                     error_field[i['image_id']]['category'] = FIELD_REQUIRED.format("Category")
 
-                if not i['location']:
+                elif not i['location']:
                     error_field[i['image_id']]['location'] = FIELD_REQUIRED.format("Location")
 
-                if not i['longitude']:
+                elif not i['longitude']:
                     error_field[i['image_id']]['longitude'] = FIELD_REQUIRED.format("Longitude")
 
-                if not i['latitude']:
+                elif not i['latitude']:
                     error_field[i['image_id']]['latitude'] = FIELD_REQUIRED.format("Latitude")
 
-                if not i['timezone']:
+                elif not i['timezone']:
                     error_field[i['image_id']]['timezone'] = FIELD_REQUIRED.format("Timezone")
 
-                if not i['obs_date']:
+                elif not i['obs_date']:
                     error_field[i['image_id']]['obs_date'] = FIELD_REQUIRED.format("Obs_date")
 
-                if not i['obs_time']:
+                elif not i['obs_time']:
                     error_field[i['image_id']]['obs_time'] = FIELD_REQUIRED.format("Obs_time")
 
-                if not i['azimuth']:
+                elif not i['azimuth']:
                     error_field[i['image_id']]['azimuth'] = FIELD_REQUIRED.format("Azimuth")
 
             if error_field:
                 raise serializers.ValidationError(error_field, code=400)
 
-            if data.get('camera') is None:
-                raise serializers.ValidationError('Equipment details not provided.', code=400)
+            # if data.get('camera') is None:
+            #     raise serializers.ValidationError('Equipment details not provided.', code=400)
 
         return data
 
     def create(self, validated_data):
-        print("\n-----------------------------------------------\n")
-        print(validated_data)
-        print("\n-----------------------------------------------\n")
+        # print("\n-----------------------------------------------\n")
+        # print(validated_data)
+        # print("\n-----------------------------------------------\n")
         image_data = validated_data.pop('map_data')
-        submit_flag = False
-        if self.context.get('is_draft') is None:
-            submit_flag = True
+        # submit_flag = False
+        # if self.context.get('is_draft') is None:
+        #     submit_flag = True
+        submit_flag = self.context.get('is_draft') is None
         observation = None
         category_data = {}
 
         if validated_data.get('image_type') == 1 and len(image_data) > 1:
             raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
 
-        elif (validated_data.get('image_type') == 2 or validated_data.get('image_type') == 3) and len(image_data) > 3:
+        elif (validated_data.get('image_type') or validated_data.get('image_type')) and len(image_data) > 3:
             raise serializers.ValidationError('Number of the images should not be more than 3', code=400)
 
         elif validated_data.get('image_type') == 3 and len(image_data) <= 3:
             print("image sequence")
-            observation = Observation.objects.create(**validated_data, is_submit=True if submit_flag else False)
+            observation = Observation.objects.create(**validated_data, is_submit=submit_flag)
 
         for i, data in enumerate(image_data):
+            if validated_data.get('image_type') != 3:
+                observation = Observation.objects.create(**validated_data, is_submit=submit_flag)
+
             if image_data[i].get('category_map'):
                 category_data = image_data[i].pop('category_map')
-
-            if validated_data.get('image_type') != 3:
-                observation = Observation.objects.create(**validated_data, is_submit=True if submit_flag else False)
-
-            ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
-
-            if category_data.get('category'):
                 for tle in category_data['category']:
                     ObservationCategoryMapping.objects.create(observation_id=observation.id, category=tle)
+
+            ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
 
         return observation
 
@@ -176,9 +175,11 @@ class ObservationSerializer(serializers.ModelSerializer):
         # print("\n-----------------------------------------------\n")
         image_data = validated_data.pop('map_data')
         # print(image_data)
-        submit_flag = False
-        if self.context.get('is_draft') is None:
-            submit_flag = True
+        # submit_flag = False
+        # if self.context.get('is_draft') is None:
+        #     submit_flag = True
+
+        submit_flag = self.context.get('is_draft') is None
 
         # if validated_data.get('image_type') == 1 and len(image_data) > 1:
         #     raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
@@ -188,7 +189,7 @@ class ObservationSerializer(serializers.ModelSerializer):
 
         # if submit
         instance.camera = validated_data.get('camera')
-        instance.is_submit = True if submit_flag else False
+        instance.is_submit = submit_flag
         instance.save()
 
         map_obj = ObservationImageMapping.objects.filter(observation=instance)
