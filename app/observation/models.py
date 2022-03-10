@@ -53,7 +53,7 @@ class ObservationImageMapping(BaseModel):
             self.obs_date_time_as_per_utc = dt_start
             self.save(update_fields=['obs_date_time_as_per_utc'])
         except Exception as e:
-            print(str(e))
+            print(e)
         return True
 
 

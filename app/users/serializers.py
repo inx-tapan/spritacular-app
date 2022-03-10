@@ -41,18 +41,19 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise serializers.ValidationError({'detail': 'No active account found with the given credentials.'},
                                               code=401)
 
-        data = {}
         refresh = self.get_token(self.user)
 
-        data['refresh'] = str(refresh)
-        data['access'] = str(refresh.access_token)
-        data['id'] = self.user.id
-        data['first_name'] = self.user.first_name
-        data['last_name'] = self.user.last_name
-        data['email'] = self.user.email
-        data['location'] = self.user.location
-        data['is_first_login'] = self.user.is_first_login
-        data['profile_image'] = self.user.profile_image.url if self.user.profile_image else None
+        data = {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'id': self.user.id,
+            'first_name': self.user.first_name,
+            'last_name': self.user.last_name,
+            'email': self.user.email,
+            'location': self.user.location,
+            'is_first_login': self.user.is_first_login,
+            'profile_image': self.user.profile_image.url if self.user.profile_image else None
+        }
 
         if self.user.is_first_login:
             self.user.is_first_login = False
@@ -79,8 +80,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'first_name', 'last_name', 'email', 'password', 'location', 'profile_image')
-        # extra_kwargs = {'password': {'write_only': True}}
+        fields = ('id', 'first_name', 'last_name', 'email', 'password', 'location', 'country_code', 'profile_image')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

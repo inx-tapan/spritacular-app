@@ -26,7 +26,8 @@ class User(AbstractUser):
     username = None
     uid = models.UUIDField(default=uuid.uuid4, unique=True)
     email = models.CharField(max_length=1024, unique=True)
-    location = models.CharField(max_length=30, null=True, blank=True)
+    location = models.CharField(max_length=256, null=True, blank=True)
+    country_code = models.CharField(max_length=10, null=True, blank=True)
     profile_image = models.ImageField(null=True, blank=True, upload_to='profile_image')
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True, null=True, blank=True)
@@ -61,6 +62,18 @@ class CameraSetting(BaseModel):
 
     def __str__(self):
         return f"{self.user.email} - {self.camera_type}"
+
+
+class UserCountryFlag(BaseModel):
+    country = models.CharField(max_length=50)
+    code = models.CharField(max_length=10)
+    flag = models.ImageField(upload_to='country_flags')
+
+    class Meta:
+        db_table = 'user_country_flag'
+
+    def __str__(self):
+        return f"{self.country}"
 
 
 @receiver(reset_password_token_created)
