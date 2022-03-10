@@ -118,13 +118,11 @@ class ChangePasswordSerializer(serializers.Serializer):
         confirm_password = validate_data['confirm_password']
         user = self.context.get('user')
 
-        user = authenticate(username=user.email, password=old_password)
-        if user:
+        if user := authenticate(username=user.email, password=old_password):
             try:
                 validate_password(password=new_password, user=user)
             except Exception as e:
-                raise serializers.ValidationError({'details': e.messages},
-                                                  code=400)
+                raise serializers.ValidationError({'details': e.messages}, code=400)
             if new_password == confirm_password:
                 user.set_password(new_password)
                 user.save()

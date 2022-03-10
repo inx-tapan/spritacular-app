@@ -138,33 +138,23 @@ class ObservationSerializer(serializers.ModelSerializer):
             if is_error_flag:
                 raise serializers.ValidationError(error_field, code=400)
 
-            # if data.get('camera') is None:
-            #     raise serializers.ValidationError('Equipment details not provided.', code=400)
-
         return data
 
     def create(self, validated_data):
-        # print("\n-----------------------------------------------\n")
-        # print(validated_data)
-        # print("\n-----------------------------------------------\n")
         image_data = validated_data.pop('map_data')
+        camera_data = self.context.get('camera_data')
+        print(f"@@{camera_data}")
         submit_flag = self.context.get('is_draft') is None
         observation = None
-        category_data = {}
 
-        if validated_data.get('image_type') == 1 and len(image_data) > 1:
-            raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
+        self.validate_image_length(validated_data, image_data)
 
-        elif (validated_data.get('image_type') == 2 or validated_data.get('image_type') == 3) and len(image_data) > 3:
-            raise serializers.ValidationError('Number of the images should not be more than 3', code=400)
-
-        elif validated_data.get('image_type') == 3 and len(image_data) <= 3:
-            print("image sequence")
-            observation = Observation.objects.create(**validated_data, is_submit=submit_flag)
+        if validated_data.get('image_type') == 3 and len(image_data) <= 3:
+            camera_obj, observation = self.create_camera_observation(camera_data, validated_data, submit_flag)
 
         for i, data in enumerate(image_data):
             if validated_data.get('image_type') != 3:
-                observation = Observation.objects.create(**validated_data, is_submit=submit_flag)
+                camera_obj, observation = self.create_camera_observation(camera_data, validated_data, submit_flag)
 
             if image_data[i].get('category_map'):
                 category_data = image_data[i].pop('category_map')
@@ -175,10 +165,35 @@ class ObservationSerializer(serializers.ModelSerializer):
 
         return observation
 
+    @staticmethod
+    def validate_image_length(validated_data, image_data):
+        if validated_data.get('image_type') == 1 and len(image_data) > 1:
+            raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
+
+        elif (validated_data.get('image_type') == 2 or validated_data.get('image_type') == 3) and len(image_data) > 3:
+            raise serializers.ValidationError('Number of the images should not be more than 3', code=400)
+
+    @staticmethod
+    def create_camera_observation(camera_data, validated_data, submit_flag):
+        if isinstance(camera_data, dict):
+            camera_obj = CameraSetting.objects.create(user=validated_data.get('user'),
+                                                      camera_type=camera_data.get('camera_type'),
+                                                      iso=camera_data.get('iso'),
+                                                      shutter_speed=camera_data.get('shutter_speed'),
+                                                      fps=camera_data.get('fps'),
+                                                      lens_type=camera_data.get('lens_type'),
+                                                      focal_length=camera_data.get('focal_length'),
+                                                      aperture=camera_data.get('aperture', 'None'),
+                                                      question_field_one=camera_data.get('question_field_one'),
+                                                      question_field_two=camera_data.get('question_field_two'))
+        else:
+            camera_obj = camera_data
+
+        observation = Observation.objects.create(**validated_data, is_submit=submit_flag, camera=camera_obj)
+
+        return camera_obj, observation
+
     def update(self, instance, validated_data):
-        # print("\n-----------------------------------------------\n")
-        # print(validated_data)
-        # print("\n-----------------------------------------------\n")
         image_data = validated_data.pop('map_data')
         submit_flag = self.context.get('is_draft') is None
 
