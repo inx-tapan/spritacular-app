@@ -15,6 +15,11 @@ from .serializers import UserRegisterSerializer, ChangePasswordSerializer, Camer
 from .permissions import IsOwnerOrAdmin
 
 
+class RootView(APIView):
+    def get(self, request):
+        return Response({}, status=status.HTTP_200_OK)
+
+
 class UserRegisterViewSet(viewsets.ModelViewSet):
     """
     User CRUD

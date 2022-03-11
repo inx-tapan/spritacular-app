@@ -3,13 +3,16 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 from django.urls import path, include
-from .views import UserRegisterViewSet, ChangePasswordViewSet, LogoutViewSet, CameraSettingsApiView, CustomObtainTokenPairView
+from .views import UserRegisterViewSet, ChangePasswordViewSet, LogoutViewSet, CameraSettingsApiView, \
+    CustomObtainTokenPairView, RootView
+
 # from rest_framework import routers
 # router = routers.DefaultRouter()
 # router.register('camera_setting', CameraSettingsApiView, basename='camera_setting')
 # urlpatterns = router.urls
 
 urlpatterns = [
+    path('', RootView.as_view(), name='root_view'),
     # Login
     path('token/', CustomObtainTokenPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
