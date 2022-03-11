@@ -80,7 +80,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'first_name', 'last_name', 'email', 'password', 'location', 'country_code', 'profile_image')
+        fields = ('id', 'first_name', 'last_name', 'email', 'password', 'location',
+                  'country_code', 'place_uid', 'profile_image')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -92,9 +93,14 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        user = User.objects.create(first_name=validated_data['first_name'], last_name=validated_data['last_name'],
-                                   email=validated_data['email'], location=validated_data['location'],
-                                   profile_image=validated_data.get('profile_image', ''), is_first_login=True)
+        user = User.objects.create(first_name=validated_data['first_name'],
+                                   last_name=validated_data['last_name'],
+                                   email=validated_data['email'],
+                                   location=validated_data['location'],
+                                   profile_image=validated_data.get('profile_image', ''),
+                                   country_code=validated_data.get('country_code'),
+                                   place_uid=validated_data.get('place_uid'),
+                                   is_first_login=True)
         user.set_password(validated_data['password'])
         user.save()
 
