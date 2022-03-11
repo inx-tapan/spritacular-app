@@ -64,18 +64,6 @@ class CameraSetting(BaseModel):
         return f"{self.user.email} - {self.camera_type}"
 
 
-class UserCountryFlag(BaseModel):
-    country = models.CharField(max_length=50)
-    code = models.CharField(max_length=10)
-    flag = models.ImageField(upload_to='country_flags')
-
-    class Meta:
-        db_table = 'user_country_flag'
-
-    def __str__(self):
-        return f"{self.country}"
-
-
 @receiver(reset_password_token_created)
 def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
 
