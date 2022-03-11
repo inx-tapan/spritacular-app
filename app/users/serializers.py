@@ -51,6 +51,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             'last_name': self.user.last_name,
             'email': self.user.email,
             'location': self.user.location,
+            'place_uid': self.user.place_uid,
+            'country_code': self.user.country_code,
             'is_first_login': self.user.is_first_login,
             'profile_image': self.user.profile_image.url if self.user.profile_image else None
         }
