@@ -26,7 +26,8 @@ class User(AbstractUser):
     username = None
     uid = models.UUIDField(default=uuid.uuid4, unique=True)
     email = models.CharField(max_length=1024, unique=True)
-    location = models.CharField(max_length=30, null=True, blank=True)
+    location = models.CharField(max_length=256, null=True, blank=True)
+    country_code = models.CharField(max_length=10, null=True, blank=True)
     profile_image = models.ImageField(null=True, blank=True, upload_to='profile_image')
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True, null=True, blank=True)
@@ -43,13 +44,14 @@ class User(AbstractUser):
 
 class CameraSetting(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    camera_type = models.CharField(max_length=30)
+    camera_type = models.CharField(max_length=30, null=True, blank=True)
     iso = models.CharField(max_length=10, null=True, blank=True)
     shutter_speed = models.CharField(max_length=10, null=True, blank=True)
     fps = models.CharField(max_length=10, null=True, blank=True, help_text="Frames per second")
     lens_type = models.CharField(max_length=20, null=True, blank=True)
-    focal_length = models.CharField(max_length=10)
-    aperture = models.CharField(max_length=10)
+    focal_length = models.CharField(max_length=10, null=True, blank=True)
+    # aperture = models.CharField(max_length=10, null=True, blank=True)
+    aperture = models.FloatField(null=True, blank=True)
     question_field_one = models.TextField(null=True, blank=True)
     question_field_two = models.TextField(null=True, blank=True)
 
@@ -60,6 +62,18 @@ class CameraSetting(BaseModel):
 
     def __str__(self):
         return f"{self.user.email} - {self.camera_type}"
+
+
+class UserCountryFlag(BaseModel):
+    country = models.CharField(max_length=50)
+    code = models.CharField(max_length=10)
+    flag = models.ImageField(upload_to='country_flags')
+
+    class Meta:
+        db_table = 'user_country_flag'
+
+    def __str__(self):
+        return f"{self.country}"
 
 
 @receiver(reset_password_token_created)

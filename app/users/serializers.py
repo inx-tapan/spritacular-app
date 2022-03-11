@@ -41,18 +41,19 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise serializers.ValidationError({'detail': 'No active account found with the given credentials.'},
                                               code=401)
 
-        data = {}
         refresh = self.get_token(self.user)
 
-        data['refresh'] = str(refresh)
-        data['access'] = str(refresh.access_token)
-        data['id'] = self.user.id
-        data['first_name'] = self.user.first_name
-        data['last_name'] = self.user.last_name
-        data['email'] = self.user.email
-        data['location'] = self.user.location
-        data['is_first_login'] = self.user.is_first_login
-        data['profile_image'] = self.user.profile_image.url if self.user.profile_image else None
+        data = {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'id': self.user.id,
+            'first_name': self.user.first_name,
+            'last_name': self.user.last_name,
+            'email': self.user.email,
+            'location': self.user.location,
+            'is_first_login': self.user.is_first_login,
+            'profile_image': self.user.profile_image.url if self.user.profile_image else None
+        }
 
         if self.user.is_first_login:
             self.user.is_first_login = False
@@ -79,8 +80,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'first_name', 'last_name', 'email', 'password', 'location', 'profile_image')
-        # extra_kwargs = {'password': {'write_only': True}}
+        fields = ('id', 'first_name', 'last_name', 'email', 'password', 'location', 'country_code', 'profile_image')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -118,13 +118,11 @@ class ChangePasswordSerializer(serializers.Serializer):
         confirm_password = validate_data['confirm_password']
         user = self.context.get('user')
 
-        user = authenticate(username=user.email, password=old_password)
-        if user:
+        if user := authenticate(username=user.email, password=old_password):
             try:
                 validate_password(password=new_password, user=user)
             except Exception as e:
-                raise serializers.ValidationError({'details': e.messages},
-                                                  code=400)
+                raise serializers.ValidationError({'details': e.messages}, code=400)
             if new_password == confirm_password:
                 user.set_password(new_password)
                 user.save()
@@ -140,9 +138,9 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 class CameraSettingSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    camera_type = serializers.CharField(required=True)
-    focal_length = serializers.CharField(required=True)
-    aperture = serializers.CharField(required=True)
+    # camera_type = serializers.CharField(required=True)
+    # focal_length = serializers.CharField(required=True)
+    # aperture = serializers.CharField(required=True)
 
     class Meta:
         model = CameraSetting
@@ -150,14 +148,29 @@ class CameraSettingSerializer(serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if 'observation_settings' in self.context and self.context.get('observation_settings'):
-            self.fields['camera_type'].required = False
-            self.fields['focal_length'].required = False
-            self.fields['aperture'].required = False
+        if 'observation_settings' not in self.context or 'is_draft' not in self.context:
+            self.fields['camera_type'] = serializers.CharField(required=True)
+            self.fields['focal_length'] = serializers.CharField(required=True)
+            self.fields['aperture'] = serializers.FloatField(required=True)
 
     def create(self, validated_data):
         if not CameraSetting.objects.filter(is_profile_camera_settings=True, user=validated_data.get('user')).exists():
-            camera_setting = CameraSetting.objects.create(**validated_data)
+            camera_type = validated_data.get('camera_type')
+            iso = validated_data.get('iso')
+            shutter_speed = validated_data.get('shutter_speed')
+            fps = validated_data.get('fps')
+            lens_type = validated_data.get('lens_type')
+            focal_length = validated_data.get('focal_length')
+            aperture = validated_data.get('aperture', None)
+            question_field_one = validated_data.get('question_field_one')
+            question_field_two = validated_data.get('question_field_two')
+            user = validated_data.get('user')
+
+            camera_setting = CameraSetting.objects.create(camera_type=camera_type, iso=iso, shutter_speed=shutter_speed,
+                                                          fps=fps, lens_type=lens_type, focal_length=focal_length,
+                                                          aperture=aperture, question_field_one=question_field_one,
+                                                          question_field_two=question_field_two, user=user)
+
             if self.context.get('observation_settings'):
                 # TODO: For differentiating camera settings in profile and settings used in observations upload form.
                 camera_setting.is_profile_camera_settings = False

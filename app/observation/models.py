@@ -16,7 +16,7 @@ class Observation(BaseModel):
         (SEQUENCE_IMAGE, 'Images sequence from video recorded.'),
     ]
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    camera = models.ForeignKey(CameraSetting, on_delete=models.CASCADE, null=True, blank=True)
+    camera = models.ForeignKey(CameraSetting, on_delete=models.SET_NULL, null=True, blank=True)
     image_type = models.PositiveSmallIntegerField(choices=IMAGE_TYPE, default=SINGLE_IMAGE)
     is_verified = models.BooleanField(default=False)
     is_reject = models.BooleanField(default=False)
@@ -32,13 +32,15 @@ class ObservationImageMapping(BaseModel):
     observation = models.ForeignKey(Observation, on_delete=models.CASCADE)
     image = models.ImageField(upload_to='observation_image')
     location = models.CharField(max_length=50, null=True, blank=True)
-    latitude = models.CharField(max_length=10, null=True, blank=True)
-    longitude = models.CharField(max_length=10, null=True, blank=True)
+    latitude = models.DecimalField(max_digits=22, decimal_places=16, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=22, decimal_places=16, null=True, blank=True)
     obs_date = models.DateField(null=True, blank=True)
     obs_time = models.TimeField(null=True, blank=True)
     obs_date_time_as_per_utc = models.DateTimeField(null=True, blank=True)
     timezone = models.CharField(max_length=20, null=True, blank=True)
     azimuth = models.CharField(max_length=10, null=True, blank=True)
+    is_precise_azimuth = models.BooleanField(default=False)
+    time_accuracy = models.CharField(max_length=20, null=True, blank=True)
 
     def set_utc(self):
         try:
@@ -51,7 +53,7 @@ class ObservationImageMapping(BaseModel):
             self.obs_date_time_as_per_utc = dt_start
             self.save(update_fields=['obs_date_time_as_per_utc'])
         except Exception as e:
-            print(str(e))
+            print(e)
         return True
 
 

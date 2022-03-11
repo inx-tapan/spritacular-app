@@ -8,6 +8,7 @@ from PIL.ExifTags import TAGS, GPSTAGS
 from .utils import dms_coordinates_to_dd_coordinates
 from .models import ObservationImageMapping, Observation, Category, ObservationCategoryMapping
 from users.models import CameraSetting
+from constants import FIELD_REQUIRED
 
 
 class ImageMetadataSerializer(serializers.Serializer):
@@ -97,109 +98,132 @@ class ObservationSerializer(serializers.ModelSerializer):
     def validate(self, data):
         image_data = data.get('map_data')
         error_field = {}
+        is_error_flag = False
         if self.context.get('is_draft') is None:
-            for i in image_data:
+            for count, i in enumerate(image_data):
                 print(f"@@{i}@@")
-                error_field[i['image_id']] = {}
+                error_field[count] = {}
                 if not i['category_map']['category']:
-                    error_field[i['image_id']]['category'] = 'Category is a required field.'
+                    is_error_flag = True
+                    error_field[count]['category'] = FIELD_REQUIRED.format("Category")
 
-                if not i['location']:
-                    error_field[i['image_id']]['location'] = 'Location is a required field.'
+                elif not i['location']:
+                    is_error_flag = True
+                    error_field[count]['location'] = FIELD_REQUIRED.format("Location")
 
-                if not i['longitude']:
-                    error_field[i['image_id']]['longitude'] = 'Longitude is a required field.'
+                elif not i['longitude']:
+                    is_error_flag = True
+                    error_field[count]['longitude'] = FIELD_REQUIRED.format("Longitude")
 
-                if not i['latitude']:
-                    error_field[i['image_id']]['latitude'] = 'Latitude is a required field.'
+                elif not i['latitude']:
+                    is_error_flag = True
+                    error_field[count]['latitude'] = FIELD_REQUIRED.format("Latitude")
 
-                if not i['timezone']:
-                    error_field[i['image_id']]['timezone'] = 'timezone is a required field.'
+                elif not i['timezone']:
+                    is_error_flag = True
+                    error_field[count]['timezone'] = FIELD_REQUIRED.format("Timezone")
 
-                if not i['obs_date']:
-                    error_field[i['image_id']]['obs_date'] = 'Obs_date is a required field.'
+                elif not i['obs_date']:
+                    is_error_flag = True
+                    error_field[count]['obs_date'] = FIELD_REQUIRED.format("Obs_date")
 
-                if not i['obs_time']:
-                    error_field[i['image_id']]['obs_time'] = 'Obs_time is a required field.'
+                elif not i['obs_time']:
+                    is_error_flag = True
+                    error_field[count]['obs_time'] = FIELD_REQUIRED.format("Obs_time")
 
-                if not i['azimuth']:
-                    error_field[i['image_id']]['azimuth'] = 'Azimuth is a required field.'
+                elif not i['azimuth']:
+                    is_error_flag = True
+                    error_field[count]['azimuth'] = FIELD_REQUIRED.format("Azimuth")
 
-            if error_field:
+            if is_error_flag:
                 raise serializers.ValidationError(error_field, code=400)
-
-            if data.get('camera') is None:
-                raise serializers.ValidationError('Equipment details not provided.', code=400)
 
         return data
 
     def create(self, validated_data):
-        print("\n-----------------------------------------------\n")
-        print(validated_data)
-        print("\n-----------------------------------------------\n")
         image_data = validated_data.pop('map_data')
-        submit_flag = False
-        if self.context.get('is_draft') is None:
-            submit_flag = True
+        camera_data = self.context.get('camera_data')
+        print(f"@@{camera_data}")
+        submit_flag = self.context.get('is_draft') is None
         observation = None
-        category_data = {}
 
+        self.validate_image_length(validated_data, image_data)
+
+        if validated_data.get('image_type') == 3 and len(image_data) <= 3:
+            camera_obj, observation = self.create_camera_observation(camera_data, validated_data, submit_flag)
+
+        for i, data in enumerate(image_data):
+            if validated_data.get('image_type') != 3:
+                camera_obj, observation = self.create_camera_observation(camera_data, validated_data, submit_flag)
+
+            if image_data[i].get('category_map'):
+                category_data = image_data[i].pop('category_map')
+                for tle in category_data['category']:
+                    ObservationCategoryMapping.objects.create(observation_id=observation.id, category=tle)
+
+            ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
+
+        return observation
+
+    @staticmethod
+    def validate_image_length(validated_data, image_data):
         if validated_data.get('image_type') == 1 and len(image_data) > 1:
             raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
 
         elif (validated_data.get('image_type') == 2 or validated_data.get('image_type') == 3) and len(image_data) > 3:
             raise serializers.ValidationError('Number of the images should not be more than 3', code=400)
 
-        elif validated_data.get('image_type') == 3 and len(image_data) <= 3:
-            print("image sequence")
-            observation = Observation.objects.create(**validated_data, is_submit=True if submit_flag else False)
+    @staticmethod
+    def create_camera_observation(camera_data, validated_data, submit_flag):
+        if isinstance(camera_data, dict):
+            camera_obj = CameraSetting.objects.create(user=validated_data.get('user'),
+                                                      camera_type=camera_data.get('camera_type'),
+                                                      iso=camera_data.get('iso'),
+                                                      shutter_speed=camera_data.get('shutter_speed'),
+                                                      fps=camera_data.get('fps'),
+                                                      lens_type=camera_data.get('lens_type'),
+                                                      focal_length=camera_data.get('focal_length'),
+                                                      aperture=camera_data.get('aperture', 'None'),
+                                                      question_field_one=camera_data.get('question_field_one'),
+                                                      question_field_two=camera_data.get('question_field_two'))
+        else:
+            camera_obj = camera_data
 
-        for i, data in enumerate(image_data):
-            if image_data[i].get('category_map'):
-                category_data = image_data[i].pop('category_map')
+        observation = Observation.objects.create(**validated_data, is_submit=submit_flag, camera=camera_obj)
 
-            if validated_data.get('image_type') != 3:
-                observation = Observation.objects.create(**validated_data, is_submit=True if submit_flag else False)
-
-            ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
-
-            if category_data.get('category'):
-                for tle in category_data['category']:
-                    ObservationCategoryMapping.objects.create(observation_id=observation.id, category=tle)
-
-        return observation
+        return camera_obj, observation
 
     def update(self, instance, validated_data):
-        # print("\n-----------------------------------------------\n")
-        # print(validated_data)
-        # print("\n-----------------------------------------------\n")
         image_data = validated_data.pop('map_data')
-        # print(image_data)
-        submit_flag = False
-        if self.context.get('is_draft') is None:
-            submit_flag = True
+        submit_flag = self.context.get('is_draft') is None
 
-        # if validated_data.get('image_type') == 1 and len(image_data) > 1:
-        #     raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
-        #
-        # elif validated_data.get('image_type') == 2 and len(image_data) > 1:
-        #     raise serializers.ValidationError('Number of the images should not be more than 1', code=400)
+        if validated_data.get('image_type') == 1 and len(image_data) > 1:
+            raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
+
+        elif validated_data.get('image_type') == 2 and len(image_data) > 1:
+            raise serializers.ValidationError('Number of the images should not be more than 1', code=400)
 
         # if submit
-        instance.camera = validated_data.get('camera')
-        instance.is_submit = True if submit_flag else False
+        instance.is_submit = submit_flag
         instance.save()
 
-        map_obj = ObservationImageMapping.objects.get(observation=instance)
-        map_obj.image = image_data[0].get('image')
-        map_obj.location = image_data[0].get('location')
-        map_obj.timezone = image_data[0].get('timezone')
-        map_obj.longitude = image_data[0].get('longitude')
-        map_obj.latitude = image_data[0].get('latitude')
-        map_obj.azimuth = image_data[0].get('azimuth')
-        map_obj.obs_date = image_data[0].get('obs_date')
-        map_obj.obs_time = image_data[0].get('obs_time')
-        map_obj.save()
+        category_data = image_data[0].get('category_map')
+        ObservationCategoryMapping.objects.filter(observation=instance).delete()
+
+        for tle in category_data.get('category'):
+            ObservationCategoryMapping.objects.create(observation_id=instance.id, category=tle)
+
+        map_obj = ObservationImageMapping.objects.filter(observation=instance).order_by('pk')
+        for i in map_obj:
+            i.image = image_data[0].get('image')
+            i.location = image_data[0].get('location')
+            i.timezone = image_data[0].get('timezone')
+            i.longitude = image_data[0].get('longitude')
+            i.latitude = image_data[0].get('latitude')
+            i.azimuth = image_data[0].get('azimuth')
+            i.obs_date = image_data[0].get('obs_date')
+            i.obs_time = image_data[0].get('obs_time')
+            i.save()
 
         # TODO: submit draft or update draft
         return instance
