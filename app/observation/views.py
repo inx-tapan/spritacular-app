@@ -33,12 +33,12 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
 
     def create(self, request, *args, **kwargs):
-        data = json.loads(request.data['data'])
+        # data = json.loads(request.data['data'])
 
-        # data = request.data
+        data = request.data
 
-        for i in request.FILES:
-            data['map_data'][int(i.split('_')[-1])]['item'] = request.FILES[i]
+        # for i in request.FILES:
+        #     data['map_data'][int(i.split('_')[-1])]['item'] = request.FILES[i]
 
         # print(f"DATA {data}")
 
