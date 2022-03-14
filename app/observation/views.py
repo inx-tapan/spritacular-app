@@ -1,5 +1,6 @@
 import json
 
+from django.db.models import Q
 from django.http import Http404
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
@@ -32,12 +33,12 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
 
     def create(self, request, *args, **kwargs):
-        # data = json.loads(request.data['data'])
+        data = json.loads(request.data['data'])
 
-        data = request.data
+        # data = request.data
 
-        # for i in request.FILES:
-        #     data['map_data'][int(i.split('_')[-1])]['image'] = request.FILES[i]
+        for i in request.FILES:
+            data['map_data'][int(i.split('_')[-1])]['item'] = request.FILES[i]
 
         # print(f"DATA {data}")
 
@@ -114,5 +115,26 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
             return Response({"success": True}, status=status.HTTP_200_OK)
 
         return Response(observation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def user_observation_collection(self, request, *args, **kwargs):
+        observation_type = request.GET.get('type')
+        sort_by = request.GET.get('sort_by', 'recent')
+
+        filters = Q()
+        if observation_type == 'verified':
+            filters = filters & Q(is_verified=True)
+        elif observation_type == 'unverified':
+            filters = filters & Q(is_verified=False)
+        elif observation_type == 'denied':
+            filters = filters & Q(is_reject=True)
+        elif observation_type == 'draft':
+            filters = filters & Q(is_submit=False)
+
+        if sort_by == 'recent':
+            observation = Observation.objects.filter(filters)
+            print(observation)
+            serializer = ObservationSerializer(observation, many=True, context={'user_observation_collection': True})
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 

@@ -8,6 +8,7 @@ from PIL.ExifTags import TAGS, GPSTAGS
 from .utils import dms_coordinates_to_dd_coordinates
 from .models import ObservationImageMapping, Observation, Category, ObservationCategoryMapping
 from users.models import CameraSetting
+from users.serializers import UserRegisterSerializer
 from constants import FIELD_REQUIRED
 
 
@@ -77,12 +78,12 @@ class ObservationCategory(serializers.ModelSerializer):
 
 
 class ObservationImageSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'tiff', 'png', 'jpeg'])])
+    item = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'tiff', 'png', 'jpeg'])])
     category_map = ObservationCategory(required=False)
 
     class Meta:
         model = ObservationImageMapping
-        fields = ('image', 'location', 'place_uid', 'country_code', 'latitude', 'longitude', 'obs_date', 'obs_time',
+        fields = ('item', 'location', 'place_uid', 'country_code', 'latitude', 'longitude', 'obs_date', 'obs_time',
                   'timezone', 'azimuth', 'category_map')
 
 
@@ -90,55 +91,72 @@ class ObservationSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     map_data = ObservationImageSerializer(many=True)
     camera = serializers.PrimaryKeyRelatedField(queryset=CameraSetting.objects.all(), allow_null=True, required=False)
+    images = serializers.SerializerMethodField('get_image', read_only=True)
+    user_data = serializers.SerializerMethodField('get_user', read_only=True)
 
     class Meta:
         model = Observation
-        fields = ('user', 'image_type', 'camera', 'map_data', 'elevation_angle', 'video_url', 'story')
+        fields = ('user', 'image_type', 'camera', 'map_data', 'elevation_angle', 'video_url', 'story', 'images',
+                  'user_data')
 
-    def validate(self, data):
-        image_data = data.get('map_data')
-        error_field = {}
-        is_error_flag = False
-        if self.context.get('is_draft') is None:
-            for count, i in enumerate(image_data):
-                print(f"@@{i}@@")
-                error_field[count] = {}
-                if not i['category_map']['category']:
-                    is_error_flag = True
-                    error_field[count]['category'] = FIELD_REQUIRED.format("Category")
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'user_observation_collection' in self.context:
+            del self.fields['map_data']
+            del self.fields['camera']
 
-                elif not i['location']:
-                    is_error_flag = True
-                    error_field[count]['location'] = FIELD_REQUIRED.format("Location")
+    def get_image(self, data):
+        obj = ObservationImageMapping.objects.filter(observation=data)
+        return ObservationImageSerializer(obj, many=True).data
 
-                elif not i['longitude']:
-                    is_error_flag = True
-                    error_field[count]['longitude'] = FIELD_REQUIRED.format("Longitude")
+    def get_user(self, data):
+        user = data.user
+        return UserRegisterSerializer(user).data
 
-                elif not i['latitude']:
-                    is_error_flag = True
-                    error_field[count]['latitude'] = FIELD_REQUIRED.format("Latitude")
-
-                elif not i['timezone']:
-                    is_error_flag = True
-                    error_field[count]['timezone'] = FIELD_REQUIRED.format("Timezone")
-
-                elif not i['obs_date']:
-                    is_error_flag = True
-                    error_field[count]['obs_date'] = FIELD_REQUIRED.format("Obs_date")
-
-                elif not i['obs_time']:
-                    is_error_flag = True
-                    error_field[count]['obs_time'] = FIELD_REQUIRED.format("Obs_time")
-
-                elif not i['azimuth']:
-                    is_error_flag = True
-                    error_field[count]['azimuth'] = FIELD_REQUIRED.format("Azimuth")
-
-            if is_error_flag:
-                raise serializers.ValidationError(error_field, code=400)
-
-        return data
+    # def validate(self, data):
+    #     image_data = data.get('map_data')
+    #     error_field = {}
+    #     is_error_flag = False
+    #     if self.context.get('is_draft') is None:
+    #         for count, i in enumerate(image_data):
+    #             print(f"@@{i}@@")
+    #             error_field[count] = {}
+    #             if not i['category_map']['category']:
+    #                 is_error_flag = True
+    #                 error_field[count]['category'] = FIELD_REQUIRED.format("Category")
+    #
+    #             elif not i['location']:
+    #                 is_error_flag = True
+    #                 error_field[count]['location'] = FIELD_REQUIRED.format("Location")
+    #
+    #             elif not i['longitude']:
+    #                 is_error_flag = True
+    #                 error_field[count]['longitude'] = FIELD_REQUIRED.format("Longitude")
+    #
+    #             elif not i['latitude']:
+    #                 is_error_flag = True
+    #                 error_field[count]['latitude'] = FIELD_REQUIRED.format("Latitude")
+    #
+    #             elif not i['timezone']:
+    #                 is_error_flag = True
+    #                 error_field[count]['timezone'] = FIELD_REQUIRED.format("Timezone")
+    #
+    #             elif not i['obs_date']:
+    #                 is_error_flag = True
+    #                 error_field[count]['obs_date'] = FIELD_REQUIRED.format("Obs_date")
+    #
+    #             elif not i['obs_time']:
+    #                 is_error_flag = True
+    #                 error_field[count]['obs_time'] = FIELD_REQUIRED.format("Obs_time")
+    #
+    #             elif not i['azimuth']:
+    #                 is_error_flag = True
+    #                 error_field[count]['azimuth'] = FIELD_REQUIRED.format("Azimuth")
+    #
+    #         if is_error_flag:
+    #             raise serializers.ValidationError(error_field, code=400)
+    #
+    #     return data
 
     def create(self, validated_data):
         image_data = validated_data.pop('map_data')
@@ -161,7 +179,8 @@ class ObservationSerializer(serializers.ModelSerializer):
                 for tle in category_data['category']:
                     ObservationCategoryMapping.objects.create(observation_id=observation.id, category=tle)
 
-            ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
+            test_image = image_data[i].pop('item')
+            ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id, image=test_image)
 
         return observation
 
