@@ -185,7 +185,8 @@ class ObservationSerializer(serializers.ModelSerializer):
                                                       focal_length=camera_data.get('focal_length'),
                                                       aperture=camera_data.get('aperture', 'None'),
                                                       question_field_one=camera_data.get('question_field_one'),
-                                                      question_field_two=camera_data.get('question_field_two'))
+                                                      question_field_two=camera_data.get('question_field_two'),
+                                                      is_profile_camera_settings=False)
         else:
             camera_obj = camera_data
 

@@ -23,6 +23,9 @@ class Observation(BaseModel):
     is_to_be_verify = models.BooleanField(default=False)
     is_submit = models.BooleanField(default=False)
     reject_message = models.TextField(null=True, blank=True)
+    elevation_angle = models.DecimalField(max_digits=22, decimal_places=16, null=True, blank=True)
+    video_url = models.URLField(null=True, blank=True)
+    story = models.TextField(default='')
 
     def __str__(self):
         return f"Observation by {self.user.email}"
@@ -31,7 +34,9 @@ class Observation(BaseModel):
 class ObservationImageMapping(BaseModel):
     observation = models.ForeignKey(Observation, on_delete=models.CASCADE)
     image = models.ImageField(upload_to='observation_image')
-    location = models.CharField(max_length=50, null=True, blank=True)
+    location = models.CharField(max_length=256, null=True, blank=True)
+    place_uid = models.CharField(max_length=256, null=True, blank=True)
+    country_code = models.CharField(max_length=10, null=True, blank=True)
     latitude = models.DecimalField(max_digits=22, decimal_places=16, null=True, blank=True)
     longitude = models.DecimalField(max_digits=22, decimal_places=16, null=True, blank=True)
     obs_date = models.DateField(null=True, blank=True)

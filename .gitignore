@@ -6,6 +6,7 @@ app/.idea/**
 *.sqlite3
 *.env
 media/
+/app/staticfiles/
 
 # Elastic Beanstalk Files
 /app/.elasticbeanstalk/*
