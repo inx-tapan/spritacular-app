@@ -82,7 +82,7 @@ class ObservationImageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ObservationImageMapping
-        fields = ('image', 'location', 'latitude', 'longitude', 'obs_date', 'obs_time',
+        fields = ('image', 'location', 'place_uid', 'country_code', 'latitude', 'longitude', 'obs_date', 'obs_time',
                   'timezone', 'azimuth', 'category_map')
 
 
@@ -93,7 +93,7 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Observation
-        fields = ('user', 'image_type', 'camera', 'map_data')
+        fields = ('user', 'image_type', 'camera', 'map_data', 'elevation_angle', 'video_url', 'story')
 
     def validate(self, data):
         image_data = data.get('map_data')
