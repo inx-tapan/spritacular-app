@@ -33,12 +33,12 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
 
     def create(self, request, *args, **kwargs):
-        # data = json.loads(request.data['data'])
+        data = json.loads(request.data['data'])
 
-        data = request.data
+        # data = request.data
 
-        # for i in request.FILES:
-        #     data['map_data'][int(i.split('_')[-1])]['item'] = request.FILES[i]
+        for i in request.FILES:
+            data['map_data'][int(i.split('_')[-1])]['image'] = request.FILES[i]
 
         # print(f"DATA {data}")
 
@@ -60,7 +60,8 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
                 return Response({'success': True}, status=status.HTTP_201_CREATED)
 
-        return Response(observation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'observation_errors': observation_serializer.errors,
+                         'camera_errors': camera_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, *args, **kwargs):
         try:

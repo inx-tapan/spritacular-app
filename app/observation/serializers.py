@@ -78,12 +78,12 @@ class ObservationCategory(serializers.ModelSerializer):
 
 
 class ObservationImageSerializer(serializers.ModelSerializer):
-    item = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'tiff', 'png', 'jpeg'])])
+    image = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'tiff', 'png', 'jpeg'])])
     category_map = ObservationCategory(required=False)
 
     class Meta:
         model = ObservationImageMapping
-        fields = ('item', 'location', 'place_uid', 'country_code', 'latitude', 'longitude', 'obs_date', 'obs_time',
+        fields = ('image', 'location', 'place_uid', 'country_code', 'latitude', 'longitude', 'obs_date', 'obs_time',
                   'timezone', 'azimuth', 'category_map')
 
 
@@ -179,8 +179,7 @@ class ObservationSerializer(serializers.ModelSerializer):
                 for tle in category_data['category']:
                     ObservationCategoryMapping.objects.create(observation_id=observation.id, category=tle)
 
-            test_image = image_data[i].pop('item')
-            ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id, image=test_image)
+            ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
 
         return observation
 
