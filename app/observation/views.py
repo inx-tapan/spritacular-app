@@ -135,7 +135,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
     def user_observation_collection(self, request, *args, **kwargs):
         observation_type = request.GET.get('type')
-        sort_by = request.GET.get('sort_by', 'recent')
+        # sort_by = request.GET.get('sort_by', 'recent')
 
         filters = Q()
         if observation_type == 'verified':
@@ -147,10 +147,8 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         elif observation_type == 'draft':
             filters = filters & Q(is_submit=False)
 
-        if sort_by == 'recent':
-            observation = Observation.objects.filter(filters)
-            print(observation)
-            serializer = ObservationSerializer(observation, many=True, context={'user_observation_collection': True})
+        observation = Observation.objects.filter(filters)
+        serializer = ObservationSerializer(observation, many=True, context={'user_observation_collection': True})
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
