@@ -74,7 +74,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
                     raise_exception=True):
                 observation_serializer.save()
 
-                return Response({'success': True}, status=status.HTTP_201_CREATED)
+                return Response({'success': 'Form submitted successfully.'}, status=status.HTTP_201_CREATED)
 
         return Response({'observation_errors': observation_serializer.errors,
                          'camera_errors': camera_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)

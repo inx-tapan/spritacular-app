@@ -113,55 +113,53 @@ class ObservationSerializer(serializers.ModelSerializer):
         user = data.user
         return UserRegisterSerializer(user).data
 
-    # def validate(self, data):
-    #     image_data = data.get('map_data')
-    #     error_field = {}
-    #     is_error_flag = False
-    #     if self.context.get('is_draft') is None:
-    #         for count, i in enumerate(image_data):
-    #             print(f"@@{i}@@")
-    #             error_field[count] = {}
-    #             if not i['category_map']['category']:
-    #                 is_error_flag = True
-    #                 error_field[count]['category'] = FIELD_REQUIRED.format("Category")
-    #
-    #             elif not i['location']:
-    #                 is_error_flag = True
-    #                 error_field[count]['location'] = FIELD_REQUIRED.format("Location")
-    #
-    #             elif not i['longitude']:
-    #                 is_error_flag = True
-    #                 error_field[count]['longitude'] = FIELD_REQUIRED.format("Longitude")
-    #
-    #             elif not i['latitude']:
-    #                 is_error_flag = True
-    #                 error_field[count]['latitude'] = FIELD_REQUIRED.format("Latitude")
-    #
-    #             elif not i['timezone']:
-    #                 is_error_flag = True
-    #                 error_field[count]['timezone'] = FIELD_REQUIRED.format("Timezone")
-    #
-    #             elif not i['obs_date']:
-    #                 is_error_flag = True
-    #                 error_field[count]['obs_date'] = FIELD_REQUIRED.format("Obs_date")
-    #
-    #             elif not i['obs_time']:
-    #                 is_error_flag = True
-    #                 error_field[count]['obs_time'] = FIELD_REQUIRED.format("Obs_time")
-    #
-    #             elif not i['azimuth']:
-    #                 is_error_flag = True
-    #                 error_field[count]['azimuth'] = FIELD_REQUIRED.format("Azimuth")
-    #
-    #         if is_error_flag:
-    #             raise serializers.ValidationError(error_field, code=400)
-    #
-    #     return data
+    def validate(self, data):
+        image_data = data.get('map_data')
+        error_field = {}
+        is_error_flag = False
+        if self.context.get('is_draft') is None:
+            for count, i in enumerate(image_data):
+                error_field[count] = {}
+                if not i['category_map']['category']:
+                    is_error_flag = True
+                    error_field[count]['category'] = FIELD_REQUIRED.format("Category")
+
+                elif not i['location']:
+                    is_error_flag = True
+                    error_field[count]['location'] = FIELD_REQUIRED.format("Location")
+
+                elif not i['longitude']:
+                    is_error_flag = True
+                    error_field[count]['longitude'] = FIELD_REQUIRED.format("Longitude")
+
+                elif not i['latitude']:
+                    is_error_flag = True
+                    error_field[count]['latitude'] = FIELD_REQUIRED.format("Latitude")
+
+                elif not i['timezone']:
+                    is_error_flag = True
+                    error_field[count]['timezone'] = FIELD_REQUIRED.format("Timezone")
+
+                elif not i['obs_date']:
+                    is_error_flag = True
+                    error_field[count]['obs_date'] = FIELD_REQUIRED.format("Obs_date")
+
+                elif not i['obs_time']:
+                    is_error_flag = True
+                    error_field[count]['obs_time'] = FIELD_REQUIRED.format("Obs_time")
+
+                elif not i['azimuth']:
+                    is_error_flag = True
+                    error_field[count]['azimuth'] = FIELD_REQUIRED.format("Azimuth")
+
+            if is_error_flag:
+                raise serializers.ValidationError(error_field, code=400)
+
+        return data
 
     def create(self, validated_data):
         image_data = validated_data.pop('map_data')
         camera_data = self.context.get('camera_data')
-        print(f"@@{camera_data}")
         submit_flag = self.context.get('is_draft') is None
         observation = None
 
