@@ -8,10 +8,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from users.models import CameraSetting
-from .serializers import ImageMetadataSerializer, ObservationSerializer
+from .serializers import ImageMetadataSerializer, ObservationSerializer, ObservationCategorySerializer
 from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
-from .models import Observation
+from .models import Observation, Category
 
 
 class ImageMetadataViewSet(APIView):
@@ -26,6 +26,22 @@ class ImageMetadataViewSet(APIView):
             # return Response({'success': True}, status=status.HTTP_200_OK)
             return Response(json.loads(json.dumps(str(response_data))), status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CategoryViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated,)
+    queryset = Category.objects.all()
+
+    def list(self, request, *args, **kwargs):
+        data = []
+        for i in self.queryset:
+            category_details = {
+                'id': i.pk,
+                'name': i.title
+            }
+            data.append(category_details)
+
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class UploadObservationViewSet(viewsets.ModelViewSet):

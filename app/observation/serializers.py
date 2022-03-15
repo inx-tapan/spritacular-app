@@ -66,7 +66,7 @@ class ImageMetadataSerializer(serializers.Serializer):
                 "ApertureValue": exif.get('ApertureValue')}
 
 
-class ObservationCategory(serializers.ModelSerializer):
+class ObservationCategorySerializer(serializers.ModelSerializer):
     category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), many=True, required=False,
                                                   allow_null=True)
     is_other = serializers.BooleanField(default=False)
@@ -79,7 +79,7 @@ class ObservationCategory(serializers.ModelSerializer):
 
 class ObservationImageSerializer(serializers.ModelSerializer):
     image = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'tiff', 'png', 'jpeg'])])
-    category_map = ObservationCategory(required=False)
+    category_map = ObservationCategorySerializer(required=False)
 
     class Meta:
         model = ObservationImageMapping
