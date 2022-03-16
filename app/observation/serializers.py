@@ -90,11 +90,12 @@ class ObservationSerializer(serializers.ModelSerializer):
     camera = serializers.PrimaryKeyRelatedField(queryset=CameraSetting.objects.all(), allow_null=True, required=False)
     images = serializers.SerializerMethodField('get_image', read_only=True)
     user_data = serializers.SerializerMethodField('get_user', read_only=True)
+    category_data = serializers.SerializerMethodField('get_category', read_only=True)
 
     class Meta:
         model = Observation
         fields = ('user', 'image_type', 'camera', 'map_data', 'elevation_angle', 'video_url', 'story', 'images',
-                  'user_data')
+                  'user_data', 'is_verified', 'category_data')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -109,6 +110,10 @@ class ObservationSerializer(serializers.ModelSerializer):
     def get_user(self, data):
         user = data.user
         return UserRegisterSerializer(user).data
+
+    def get_category(self, data):
+        obj = ObservationCategoryMapping.objects.filter(observation=data)
+        return [i.category.title for i in obj]
 
     def validate(self, data):
         image_data = data.get('map_data')
