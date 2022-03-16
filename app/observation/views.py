@@ -130,22 +130,29 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
                          'camera_errors': camera_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
     def user_observation_collection(self, request, *args, **kwargs):
-        observation_type = request.GET.get('type')
+        observation_type = request.GET.get('observation_type')
         # sort_by = request.GET.get('sort_by', 'recent')
+
+        verified_count = Observation.objects.filter(user=request.user, is_verified=True).count()
+        unverified_count = Observation.objects.filter(user=request.user, is_verified=False, is_submit=True).count()
+        denied_count = Observation.objects.filter(user=request.user, is_reject=True, is_submit=True).count()
+        draft_count = Observation.objects.filter(user=request.user, is_submit=False).count()
 
         filters = Q(user=request.user)
         if observation_type == 'verified':
             filters = filters & Q(is_verified=True)
         elif observation_type == 'unverified':
-            filters = filters & Q(is_verified=False)
+            filters = filters & Q(is_verified=False, is_submit=True)
         elif observation_type == 'denied':
-            filters = filters & Q(is_reject=True)
+            filters = filters & Q(is_reject=True, is_submit=True)
         elif observation_type == 'draft':
             filters = filters & Q(is_submit=False)
 
         observation = Observation.objects.filter(filters)
         serializer = ObservationSerializer(observation, many=True, context={'user_observation_collection': True})
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({'data': serializer.data, 'verified_count': verified_count,
+                         'unverified_count': unverified_count, 'denied_count': denied_count,
+                         'draft_count': draft_count}, status=status.HTTP_200_OK)
 
 
