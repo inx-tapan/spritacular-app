@@ -1,9 +1,6 @@
-import datetime
-
 from django.core.validators import FileExtensionValidator
 from rest_framework import serializers
 from PIL import Image
-# from exif import Image
 from PIL.ExifTags import TAGS, GPSTAGS
 from .utils import dms_coordinates_to_dd_coordinates
 from .models import ObservationImageMapping, Observation, Category, ObservationCategoryMapping
@@ -78,13 +75,13 @@ class ObservationCategorySerializer(serializers.ModelSerializer):
 
 
 class ObservationImageSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'tiff', 'png', 'jpeg'])])
+    image = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'png', 'jpeg'])])
     category_map = ObservationCategorySerializer(required=False)
 
     class Meta:
         model = ObservationImageMapping
         fields = ('image', 'location', 'place_uid', 'country_code', 'latitude', 'longitude', 'obs_date', 'obs_time',
-                  'timezone', 'azimuth', 'category_map')
+                  'timezone', 'azimuth', 'category_map', 'obs_date_time_as_per_utc')
 
 
 class ObservationSerializer(serializers.ModelSerializer):
@@ -177,7 +174,8 @@ class ObservationSerializer(serializers.ModelSerializer):
                 for tle in category_data['category']:
                     ObservationCategoryMapping.objects.create(observation_id=observation.id, category=tle)
 
-            ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
+            obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
+            obs_image_map_obj.set_utc()
 
         return observation
 
@@ -241,6 +239,7 @@ class ObservationSerializer(serializers.ModelSerializer):
             i.obs_date = image_data[0].get('obs_date')
             i.obs_time = image_data[0].get('obs_time')
             i.save()
+            i.set_utc()
 
         # TODO: submit draft or update draft
         return instance

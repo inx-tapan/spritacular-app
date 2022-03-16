@@ -3,7 +3,6 @@ import json
 from django.db.models import Q
 from django.http import Http404
 from rest_framework.permissions import IsAuthenticated
-from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -51,12 +50,8 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         data = json.loads(request.data['data'])
 
-        # data = request.data
-
         for i in request.FILES:
             data['map_data'][int(i.split('_')[-1])]['image'] = request.FILES[i]
-
-        # print(f"DATA {data}")
 
         camera_data = data.pop('camera')
 
@@ -83,7 +78,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         try:
             obs_obj = Observation.objects.get(pk=kwargs.get('pk'), is_submit=False)
         except Observation.DoesNotExist:
-            return Response({'detail': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Http404
 
         data = json.loads(request.data['data'])
 
@@ -98,11 +93,11 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
         camera_flag = isinstance(data.get('camera'), dict)
 
-        if obs_obj.camera is None and isinstance(camera_data, dict):
-            camera_serializer = CameraSettingSerializer(data=data['camera'],
-                                                        context={'request': request, 'observation_settings': True})
+        # if obs_obj.camera is None and isinstance(camera_data, dict):
+        #     camera_serializer = CameraSettingSerializer(data=data['camera'],
+        #                                                 context={'request': request, 'observation_settings': True})
 
-        elif (obs_obj.camera and obs_obj.camera.is_profile_camera_settings) and isinstance(camera_data, dict):
+        if (obs_obj.camera and obs_obj.camera.is_profile_camera_settings) and isinstance(camera_data, dict):
             camera_serializer = CameraSettingSerializer(data=camera_data, context=obs_context)
 
         elif (obs_obj.camera and not obs_obj.camera.is_profile_camera_settings) and isinstance(camera_data, dict):
@@ -131,13 +126,14 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
             return Response({"success": True}, status=status.HTTP_200_OK)
 
-        return Response(observation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'observation_errors': observation_serializer.errors,
+                         'camera_errors': camera_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
     def user_observation_collection(self, request, *args, **kwargs):
         observation_type = request.GET.get('type')
         # sort_by = request.GET.get('sort_by', 'recent')
 
-        filters = Q()
+        filters = Q(user=request.user)
         if observation_type == 'verified':
             filters = filters & Q(is_verified=True)
         elif observation_type == 'unverified':
