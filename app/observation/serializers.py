@@ -5,7 +5,7 @@ from PIL.ExifTags import TAGS, GPSTAGS
 from .utils import dms_coordinates_to_dd_coordinates
 from .models import ObservationImageMapping, Observation, Category, ObservationCategoryMapping
 from users.models import CameraSetting
-from users.serializers import UserRegisterSerializer
+from users.serializers import UserRegisterSerializer, CameraSettingSerializer
 from constants import FIELD_REQUIRED
 
 
@@ -91,11 +91,12 @@ class ObservationSerializer(serializers.ModelSerializer):
     images = serializers.SerializerMethodField('get_image', read_only=True)
     user_data = serializers.SerializerMethodField('get_user', read_only=True)
     category_data = serializers.SerializerMethodField('get_category', read_only=True)
+    camera_data = serializers.SerializerMethodField('get_camera', read_only=True)
 
     class Meta:
         model = Observation
         fields = ('user', 'image_type', 'camera', 'map_data', 'elevation_angle', 'video_url', 'story', 'images',
-                  'user_data', 'is_verified', 'category_data')
+                  'user_data', 'is_verified', 'category_data', 'camera_data')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -114,6 +115,9 @@ class ObservationSerializer(serializers.ModelSerializer):
     def get_category(self, data):
         obj = ObservationCategoryMapping.objects.filter(observation=data)
         return [i.category.title for i in obj]
+
+    def get_camera(self, data):
+        return CameraSettingSerializer(data.camera).data
 
     def validate(self, data):
         image_data = data.get('map_data')

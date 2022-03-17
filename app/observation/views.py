@@ -155,4 +155,14 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
                          'unverified_count': unverified_count, 'denied_count': denied_count,
                          'draft_count': draft_count}, status=status.HTTP_200_OK)
 
+    def get_draft_data(self, request, *args, **kwargs):
+        try:
+            obs_obj = Observation.objects.get(pk=kwargs.get('pk'), is_submit=False)
+        except Observation.DoesNotExist:
+            return Response({'detail': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ObservationSerializer(obs_obj, context={'user_observation_collection': True})
+
+        return Response({'data': serializer.data}, status=status.HTTP_200_OK)
+
 
