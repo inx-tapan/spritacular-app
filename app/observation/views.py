@@ -71,6 +71,14 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
                 return Response({'success': 'Form submitted successfully.'}, status=status.HTTP_201_CREATED)
 
+        else:
+            obs_context['camera_data'] = camera_data
+            observation_serializer = self.serializer_class(data=data, context=obs_context)
+            if observation_serializer.is_valid(raise_exception=True):
+                observation_serializer.save()
+
+            return Response({'success': 'Form submitted successfully.'}, status=status.HTTP_201_CREATED)
+
         return Response({'observation_errors': observation_serializer.errors,
                          'camera_errors': camera_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 

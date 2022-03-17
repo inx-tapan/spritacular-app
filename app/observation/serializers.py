@@ -211,7 +211,10 @@ class ObservationSerializer(serializers.ModelSerializer):
                                                       question_field_two=camera_data.get('question_field_two'),
                                                       is_profile_camera_settings=False)
         else:
-            camera_obj = camera_data
+            try:
+                camera_obj = CameraSetting.objects.get(pk=camera_data)
+            except CameraSetting.DoesNotExist:
+                camera_obj = None
 
         observation = Observation.objects.create(**validated_data, is_submit=submit_flag, camera=camera_obj)
 
