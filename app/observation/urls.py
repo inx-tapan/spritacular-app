@@ -12,5 +12,5 @@ urlpatterns = [
          name="update_observation"),
     path('observation_collection/', UploadObservationViewSet.as_view({'get': 'user_observation_collection'}),
          name="update_observation"),
-    path('get_draft_data/<int:pk>/', UploadObservationViewSet.as_view({'get': 'get_draft_data'}), name="get_draft_data")
+    path('get_draft_data/<int:pk>/', UploadObservationViewSet.as_view({'get': 'retrieve'}), name="get_draft_data")
 ]

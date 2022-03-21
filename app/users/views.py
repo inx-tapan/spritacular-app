@@ -1,4 +1,3 @@
-# from django.contrib.auth import login, logout
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
@@ -13,6 +12,7 @@ from .serializers import MyTokenObtainPairSerializer
 from .models import User, CameraSetting
 from .serializers import UserRegisterSerializer, ChangePasswordSerializer, CameraSettingSerializer
 from .permissions import IsOwnerOrAdmin
+from constants import NOT_FOUND
 
 
 class RootView(APIView):
@@ -33,8 +33,14 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         permission_classes = []
         print(f"ACTION {self.action}")
-        if self.action == 'retrieve' or self.action == 'patch' or self.action == 'profile_update'\
-                or self.action == 'put' or self.action == 'update_user_profile' or self.action == 'get_user_details':
+        if self.action in [
+            'retrieve',
+            'patch',
+            'profile_update',
+            'put',
+            'update_user_profile',
+            'get_user_details',
+        ]:
             permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
         return [permission() for permission in permission_classes]
 
@@ -143,7 +149,6 @@ class CameraSettingsApiView(viewsets.ModelViewSet):
         Adding is_profile_camera_settings filter in the query.
         :return: Authenticated user CameraSetting object if exists else 404.
         """
-        print(f"--{self.action}")
         try:
             return CameraSetting.objects.get(user_id=self.request.user.id, is_profile_camera_settings=True)
         except CameraSetting.DoesNotExist:

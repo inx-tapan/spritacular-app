@@ -30,8 +30,6 @@ class ImageMetadataSerializer(serializers.Serializer):
                         exif[TAGS[tag]] = value
 
             trash_data = ['MakerNote', 'UserComment', 'ImageDescription']
-            # required_data = ['GPSInfo', 'FocalLength', 'FocalLengthIn35mmFilm', 'ISOSpeedRatings',
-            #                  'ExposureTime', 'Make', 'DateTime', 'ApertureValue']
 
             for i in trash_data:
                 if i in exif:
@@ -81,7 +79,8 @@ class ObservationImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ObservationImageMapping
         fields = ('image', 'location', 'place_uid', 'country_code', 'latitude', 'longitude', 'obs_date', 'obs_time',
-                  'timezone', 'azimuth', 'category_map', 'obs_date_time_as_per_utc')
+                  'timezone', 'azimuth', 'category_map', 'obs_date_time_as_per_utc', 'time_accuracy',
+                  'is_precise_azimuth')
 
 
 class ObservationSerializer(serializers.ModelSerializer):
@@ -193,7 +192,7 @@ class ObservationSerializer(serializers.ModelSerializer):
         if validated_data.get('image_type') == 1 and len(image_data) > 1:
             raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
 
-        elif (validated_data.get('image_type') == 2 or validated_data.get('image_type') == 3) and len(image_data) > 3:
+        elif validated_data.get('image_type') in [2, 3] and len(image_data) > 3:
             raise serializers.ValidationError('Number of the images should not be more than 3', code=400)
 
     @staticmethod
@@ -250,6 +249,8 @@ class ObservationSerializer(serializers.ModelSerializer):
             i.azimuth = image_data[0].get('azimuth')
             i.obs_date = image_data[0].get('obs_date')
             i.obs_time = image_data[0].get('obs_time')
+            i.is_precise_azimuth = image_data[0].get('is_precise_azimuth')
+            i.time_accuracy = image_data[0].get('time_accuracy')
             i.save()
             i.set_utc()
 
