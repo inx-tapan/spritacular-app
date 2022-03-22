@@ -219,11 +219,11 @@ CACHE_TTL = 60 * 60  # Cache time to live is 60 minutes.
 
 CACHES = {
     "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
+        "BACKEND": config('CACHE_BACKEND'),
+        "LOCATION": config('CACHE_LOCATION'),
         "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient"
+            "CLIENT_CLASS": config('CLIENT_CLASS')
         },
-        "KEY_PREFIX": "spritacular"
+        "KEY_PREFIX": config('KEY_PREFIX')
     }
 }
