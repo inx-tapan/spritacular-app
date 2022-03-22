@@ -12,7 +12,6 @@ from .serializers import MyTokenObtainPairSerializer
 from .models import User, CameraSetting
 from .serializers import UserRegisterSerializer, ChangePasswordSerializer, CameraSettingSerializer
 from .permissions import IsOwnerOrAdmin
-from constants import NOT_FOUND
 
 
 class RootView(APIView):
@@ -79,7 +78,6 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
 
 
 class CustomObtainTokenPairView(TokenObtainPairView):
-    # permission_classes = (permissions.AllowAny,)
     serializer_class = MyTokenObtainPairSerializer
 
 

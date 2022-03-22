@@ -213,3 +213,17 @@ AWS_DEFAULT_ACL = config('AWS_DEFAULT_ACL')
 AWS_S3_FILE_OVERWRITE = False  # for handling files with duplicate names
 
 FRONTEND_URL = config('FRONTEND_URL')
+
+# settings related to redis
+CACHE_TTL = 60 * 60  # Cache time to live is 60 minutes.
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient"
+        },
+        "KEY_PREFIX": "spritacular"
+    }
+}

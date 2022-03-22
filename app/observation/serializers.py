@@ -6,7 +6,7 @@ from .utils import dms_coordinates_to_dd_coordinates
 from .models import ObservationImageMapping, Observation, Category, ObservationCategoryMapping
 from users.models import CameraSetting
 from users.serializers import UserRegisterSerializer, CameraSettingSerializer
-from constants import FIELD_REQUIRED
+from constants import FIELD_REQUIRED, SINGLE_IMAGE_VALID, MULTIPLE_IMAGE_VALID
 
 
 class ImageMetadataSerializer(serializers.Serializer):
@@ -147,11 +147,11 @@ class ObservationSerializer(serializers.ModelSerializer):
 
                 elif not i['obs_date']:
                     is_error_flag = True
-                    error_field[count]['obs_date'] = FIELD_REQUIRED.format("Obs_date")
+                    error_field[count]['obs_date'] = FIELD_REQUIRED.format("Observation date")
 
                 elif not i['obs_time']:
                     is_error_flag = True
-                    error_field[count]['obs_time'] = FIELD_REQUIRED.format("Obs_time")
+                    error_field[count]['obs_time'] = FIELD_REQUIRED.format("Observation time")
 
                 elif not i['azimuth']:
                     is_error_flag = True
@@ -165,6 +165,7 @@ class ObservationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         image_data = validated_data.pop('map_data')
         camera_data = self.context.get('camera_data')
+        # Flag for submit or draft request
         submit_flag = self.context.get('is_draft') is None
         observation = None
 
@@ -180,7 +181,9 @@ class ObservationSerializer(serializers.ModelSerializer):
             if image_data[i].get('category_map'):
                 category_data = image_data[i].pop('category_map')
                 for tle in category_data['category']:
-                    ObservationCategoryMapping.objects.create(observation_id=observation.id, category=tle)
+                    if not ObservationCategoryMapping.objects.filter(observation_id=observation.id,
+                                                                     category=tle).exists():
+                        ObservationCategoryMapping.objects.create(observation_id=observation.id, category=tle)
 
             obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
             obs_image_map_obj.set_utc()
@@ -190,10 +193,10 @@ class ObservationSerializer(serializers.ModelSerializer):
     @staticmethod
     def validate_image_length(validated_data, image_data):
         if validated_data.get('image_type') == 1 and len(image_data) > 1:
-            raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
+            raise serializers.ValidationError(SINGLE_IMAGE_VALID, code=400)
 
         elif validated_data.get('image_type') in [2, 3] and len(image_data) > 3:
-            raise serializers.ValidationError('Number of the images should not be more than 3', code=400)
+            raise serializers.ValidationError(MULTIPLE_IMAGE_VALID, code=400)
 
     @staticmethod
     def create_camera_observation(camera_data, validated_data, submit_flag):
@@ -221,19 +224,21 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         image_data = validated_data.pop('map_data')
+        # Flag for submit or draft request
         submit_flag = self.context.get('is_draft') is None
 
-        if validated_data.get('image_type') == 1 and len(image_data) > 1:
-            raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
+        if validated_data.get('image_type') in [1, 2] and len(image_data) > 1:
+            raise serializers.ValidationError(SINGLE_IMAGE_VALID, code=400)
 
-        elif validated_data.get('image_type') == 2 and len(image_data) > 1:
-            raise serializers.ValidationError('Number of the images should not be more than 1', code=400)
+        elif validated_data.get('image_type') == 3 and len(image_data) > 3:
+            raise serializers.ValidationError(MULTIPLE_IMAGE_VALID, code=400)
 
         # if submit
         instance.is_submit = submit_flag
         instance.save()
 
         category_data = image_data[0].get('category_map')
+        # Deleting all previously selected tle
         ObservationCategoryMapping.objects.filter(observation=instance).delete()
 
         for tle in category_data.get('category'):

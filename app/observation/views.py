@@ -4,13 +4,14 @@ from django.db.models import Q
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.core.cache import cache
 
 from users.models import CameraSetting
 from .serializers import ImageMetadataSerializer, ObservationSerializer
 from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
 from .models import Observation, Category
-from constants import NOT_FOUND
+from constants import NOT_FOUND, OBS_FORM_SUCCESS
 
 
 class ImageMetadataViewSet(APIView):
@@ -70,7 +71,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
                     raise_exception=True):
                 observation_serializer.save()
 
-                return Response({'success': 'Form submitted successfully', 'status': 1}, status=status.HTTP_201_CREATED)
+                return Response(OBS_FORM_SUCCESS, status=status.HTTP_201_CREATED)
 
         else:
             obs_context['camera_data'] = camera_data
@@ -78,7 +79,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
             if observation_serializer.is_valid(raise_exception=True):
                 observation_serializer.save()
 
-            return Response({'success': 'Form submitted successfully', 'status': 1}, status=status.HTTP_201_CREATED)
+            return Response(OBS_FORM_SUCCESS, status=status.HTTP_201_CREATED)
 
         return Response({'observation_errors': observation_serializer.errors,
                          'camera_errors': camera_serializer.errors, 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
@@ -102,10 +103,6 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
             obs_context['is_draft'] = True
 
         camera_flag = isinstance(camera_data, dict)
-
-        # if obs_obj.camera is None and isinstance(camera_data, dict):
-        #     camera_serializer = CameraSettingSerializer(data=data['camera'],
-        #                                                 context={'request': request, 'observation_settings': True})
 
         if (obs_obj.camera and obs_obj.camera.is_profile_camera_settings) and camera_flag:
             # if the profile camera setting toggle is off.
@@ -136,7 +133,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
                 obs_obj.camera = camera_data
             obs_obj.save()
 
-            return Response({'success': 'Form updated successfully', 'status': 1}, status=status.HTTP_200_OK)
+            return Response(OBS_FORM_SUCCESS, status=status.HTTP_200_OK)
 
         return Response({'observation_errors': observation_serializer.errors,
                          'camera_errors': camera_serializer.errors, 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
@@ -170,7 +167,15 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         elif observation_type == 'draft':
             filters = filters & Q(is_submit=False)
 
-        observation = Observation.objects.filter(filters)
+        if cache.get(f'user_id-{request.user.id}-observation-{observation_type}'):
+            print("from CACHE")
+            observation = cache.get(f'user_id-{request.user.id}-observation-{observation_type}')
+        else:
+            print("from DB")
+            observation = Observation.objects.filter(filters)
+            cache.set(f'user_id-{request.user.id}-observation-{observation_type}', observation)
+
+        # observation = Observation.objects.filter(filters)
         serializer = self.serializer_class(observation, many=True, context={'user_observation_collection': True})
 
         return Response({'data': serializer.data, 'verified_count': verified_count,
