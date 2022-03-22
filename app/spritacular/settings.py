@@ -215,15 +215,15 @@ AWS_S3_FILE_OVERWRITE = False  # for handling files with duplicate names
 FRONTEND_URL = config('FRONTEND_URL')
 
 # settings related to redis
-CACHE_TTL = 60 * 60  # Cache time to live is 60 minutes.
+# CACHE_TTL = 60 * 60  # Cache time to live is 60 minutes.
 
-CACHES = {
-    "default": {
-        "BACKEND": config('CACHE_BACKEND'),
-        "LOCATION": config('CACHE_LOCATION'),
-        "OPTIONS": {
-            "CLIENT_CLASS": config('CLIENT_CLASS')
-        },
-        "KEY_PREFIX": config('KEY_PREFIX')
-    }
-}
+# CACHES = {
+#     "default": {
+#         "BACKEND": config('CACHE_BACKEND'),
+#         "LOCATION": config('CACHE_LOCATION'),
+#         "OPTIONS": {
+#             "CLIENT_CLASS": config('CLIENT_CLASS')
+#         },
+#         "KEY_PREFIX": config('KEY_PREFIX')
+#     }
+# }

@@ -7,6 +7,7 @@ from .models import ObservationImageMapping, Observation, Category, ObservationC
 from users.models import CameraSetting
 from users.serializers import UserRegisterSerializer, CameraSettingSerializer
 from constants import FIELD_REQUIRED, SINGLE_IMAGE_VALID, MULTIPLE_IMAGE_VALID
+from spritacular.utils import compress_image
 
 
 class ImageMetadataSerializer(serializers.Serializer):
@@ -95,7 +96,7 @@ class ObservationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Observation
         fields = ('user', 'image_type', 'camera', 'map_data', 'elevation_angle', 'video_url', 'story', 'images',
-                  'user_data', 'is_verified', 'category_data', 'camera_data')
+                  'user_data', 'is_verified', 'category_data', 'camera_data', 'is_submit', 'is_reject')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -185,7 +186,11 @@ class ObservationSerializer(serializers.ModelSerializer):
                                                                      category=tle).exists():
                         ObservationCategoryMapping.objects.create(observation_id=observation.id, category=tle)
 
-            obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
+            obs_image = image_data[i].pop('image')
+            new_image_obj = compress_image(obs_image)
+            obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i],
+                                                                       observation_id=observation.id,
+                                                                       image=new_image_obj)
             obs_image_map_obj.set_utc()
 
         return observation
