@@ -84,7 +84,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         try:
-            obs_obj = Observation.objects.get(pk=kwargs.get('pk'), is_submit=False)
+            obs_obj = Observation.objects.get(pk=kwargs.get('pk'), user=request.user, is_submit=False)
         except Observation.DoesNotExist:
             return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
