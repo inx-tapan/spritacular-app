@@ -15,7 +15,7 @@ def compress_image(obs_image):
             mode='P',  # use mode='PA' for transparency
             palette=Image.ADAPTIVE
         )
-    im.save(output, format=ext, quality=50)
+    im.save(output, format=ext, quality=70)
     output.seek(0)
 
     return InMemoryUploadedFile(
