@@ -149,23 +149,10 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         return Response({'data': serializer.data, 'status': 1}, status=status.HTTP_200_OK)
 
     def user_observation_collection(self, request, *args, **kwargs):
-        observation_type = request.GET.get('observation_type')
-        # sort_by = request.GET.get('sort_by', 'recent')
-
         verified_count = Observation.objects.filter(user=request.user, is_verified=True).count()
         unverified_count = Observation.objects.filter(user=request.user, is_verified=False, is_submit=True).count()
         denied_count = Observation.objects.filter(user=request.user, is_reject=True, is_submit=True).count()
         draft_count = Observation.objects.filter(user=request.user, is_submit=False).count()
-
-        filters = Q(user=request.user)
-        if observation_type == 'verified':
-            filters = filters & Q(is_verified=True)
-        elif observation_type == 'unverified':
-            filters = filters & Q(is_verified=False, is_submit=True)
-        elif observation_type == 'denied':
-            filters = filters & Q(is_reject=True, is_submit=True)
-        elif observation_type == 'draft':
-            filters = filters & Q(is_submit=False)
 
         # if cache.get(f'user_id-{request.user.id}-observation-{observation_type}'):
         #     print("from CACHE")
@@ -175,7 +162,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         #     observation = Observation.objects.filter(filters)
         #     cache.set(f'user_id-{request.user.id}-observation-{observation_type}', observation)
 
-        observation = Observation.objects.filter(filters)
+        observation = Observation.objects.filter(user=request.user)
         serializer = self.serializer_class(observation, many=True, context={'user_observation_collection': True})
 
         return Response({'data': serializer.data, 'verified_count': verified_count,
