@@ -94,7 +94,7 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Observation
-        fields = ('user', 'image_type', 'camera', 'map_data', 'elevation_angle', 'video_url', 'story', 'images',
+        fields = ('id', 'user', 'image_type', 'camera', 'map_data', 'elevation_angle', 'video_url', 'story', 'images',
                   'user_data', 'is_verified', 'category_data', 'camera_data', 'is_submit', 'is_reject')
 
     def __init__(self, *args, **kwargs):
