@@ -147,7 +147,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         return Response({'data': serializer.data, 'status': 1}, status=status.HTTP_200_OK)
 
     def user_observation_collection(self, request, *args, **kwargs):
-        verified_count = Observation.objects.filter(user=request.user, is_verified=True).count()
+        verified_count = Observation.objects.filter(user=request.user, is_verified=True, is_submit=True).count()
         unverified_count = Observation.objects.filter(user=request.user, is_verified=False, is_submit=True).count()
         denied_count = Observation.objects.filter(user=request.user, is_reject=True, is_submit=True).count()
         draft_count = Observation.objects.filter(user=request.user, is_submit=False).count()
