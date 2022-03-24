@@ -78,7 +78,7 @@ class ObservationImageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ObservationImageMapping
-        fields = ('image', 'location', 'place_uid', 'country_code', 'latitude', 'longitude', 'obs_date', 'obs_time',
+        fields = ('id', 'image', 'location', 'place_uid', 'country_code', 'latitude', 'longitude', 'obs_date', 'obs_time',
                   'timezone', 'azimuth', 'category_map', 'obs_date_time_as_per_utc', 'time_accuracy',
                   'is_precise_azimuth')
 
@@ -108,7 +108,7 @@ class ObservationSerializer(serializers.ModelSerializer):
         # for i in obj:
         serialize_data = ObservationImageSerializer(obj, many=True).data
         for i in serialize_data:
-            i['category_data']= {}
+            i['category_data'] = {}
             i['category_data']['category'] = self.get_category(data)
         return serialize_data
 
