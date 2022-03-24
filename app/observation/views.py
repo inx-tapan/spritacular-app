@@ -5,10 +5,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from users.models import CameraSetting
-from .serializers import ImageMetadataSerializer, ObservationSerializer
+from .serializers import ImageMetadataSerializer, ObservationSerializer, ObservationCommentSerializer
 from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
-from .models import Observation, Category
+from .models import Observation, Category, ObservationComment
 from constants import NOT_FOUND, OBS_FORM_SUCCESS
 
 
@@ -167,5 +167,13 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
                          'unverified_count': unverified_count, 'denied_count': denied_count,
                          'draft_count': draft_count}, status=status.HTTP_200_OK)
 
+
+class ObservationCommentViewSet(viewsets.ModelViewSet):
+    """
+    CRUD operations for observation comments
+    """
+    serializer_class = ObservationCommentSerializer
+    queryset = ObservationComment.objects.all()
+    permission_classes = (IsAuthenticated,)
 
 
