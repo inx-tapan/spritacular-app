@@ -73,7 +73,7 @@ class ObservationCategorySerializer(serializers.ModelSerializer):
 
 
 class ObservationImageSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'png', 'jpeg'])])
+    image = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'png', 'jpeg'])], allow_null=True)
     category_map = ObservationCategorySerializer(required=False)
 
     class Meta:
@@ -85,7 +85,7 @@ class ObservationImageSerializer(serializers.ModelSerializer):
 
 class ObservationSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    map_data = ObservationImageSerializer(many=True)
+    map_data = ObservationImageSerializer(many=True, source='observationimagemapping_set')
     camera = serializers.PrimaryKeyRelatedField(queryset=CameraSetting.objects.all(), allow_null=True, required=False)
     images = serializers.SerializerMethodField('get_image', read_only=True)
     user_data = serializers.SerializerMethodField('get_user', read_only=True)
@@ -99,9 +99,9 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if 'user_observation_collection' in self.context:
-            del self.fields['map_data']
-            del self.fields['camera']
+        # if 'user_observation_collection' in self.context:
+        #     del self.fields['map_data']
+        #     del self.fields['camera']
 
     def get_image(self, data):
         obj = ObservationImageMapping.objects.filter(observation=data)
@@ -119,7 +119,8 @@ class ObservationSerializer(serializers.ModelSerializer):
         return CameraSettingSerializer(data.camera).data
 
     def validate(self, data):
-        image_data = data.get('map_data')
+        print(data)
+        image_data = data.get('observationimagemapping_set')
         error_field = {}
         is_error_flag = False
         if self.context.get('is_draft') is None:
@@ -163,7 +164,7 @@ class ObservationSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        image_data = validated_data.pop('map_data')
+        image_data = validated_data.pop('observationimagemapping_set')
         camera_data = self.context.get('camera_data')
         # Flag for submit or draft request
         submit_flag = self.context.get('is_draft') is None
@@ -223,7 +224,7 @@ class ObservationSerializer(serializers.ModelSerializer):
         return camera_obj, observation
 
     def update(self, instance, validated_data):
-        image_data = validated_data.pop('map_data')
+        image_data = validated_data.pop('observationimagemapping_set')
         # Flag for submit or draft request
         submit_flag = self.context.get('is_draft') is None
 
