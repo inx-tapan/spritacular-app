@@ -160,7 +160,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         #     observation = Observation.objects.filter(filters)
         #     cache.set(f'user_id-{request.user.id}-observation-{observation_type}', observation)
 
-        observation = Observation.objects.filter(user=request.user)
+        observation = Observation.objects.filter(user=request.user).order_by('-pk')
         serializer = self.serializer_class(observation, many=True, context={'user_observation_collection': True})
 
         return Response({'data': serializer.data, 'verified_count': verified_count,
