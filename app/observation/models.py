@@ -42,7 +42,7 @@ class ObservationImageMapping(BaseModel):
     obs_date = models.DateField(null=True, blank=True)
     obs_time = models.TimeField(null=True, blank=True)
     obs_date_time_as_per_utc = models.DateTimeField(null=True, blank=True)
-    timezone = models.CharField(max_length=20, null=True, blank=True)
+    timezone = models.CharField(max_length=50, null=True, blank=True)
     azimuth = models.CharField(max_length=10, null=True, blank=True)
     is_precise_azimuth = models.BooleanField(default=False)
     time_accuracy = models.CharField(max_length=20, null=True, blank=True)
