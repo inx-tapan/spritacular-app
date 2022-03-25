@@ -108,6 +108,7 @@ class ObservationSerializer(serializers.ModelSerializer):
         # for i in obj:
         serialize_data = ObservationImageSerializer(obj, many=True).data
         for i in serialize_data:
+            i['image'] = None
             i['category_map'] = {}
             i['category_map']['category'] = self.get_category(data)
         return serialize_data
@@ -124,7 +125,6 @@ class ObservationSerializer(serializers.ModelSerializer):
         return CameraSettingSerializer(data.camera).data
 
     def validate(self, data):
-        print(data)
         image_data = data.get('map_data')
         error_field = {}
         is_error_flag = False
@@ -162,6 +162,10 @@ class ObservationSerializer(serializers.ModelSerializer):
                 elif not i['azimuth']:
                     is_error_flag = True
                     error_field[count]['azimuth'] = FIELD_REQUIRED.format("Azimuth")
+
+                elif (i['azimuth'] and i['azimuth'].isdigit()) and int(i['azimuth']) > 360:
+                    is_error_flag = True
+                    error_field[count]['azimuth'] = 'Azimuth angle should not be more than 360°.'
 
             if is_error_flag:
                 raise serializers.ValidationError(error_field, code=400)
@@ -206,23 +210,23 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def create_camera_observation(camera_data, validated_data, submit_flag):
-        if isinstance(camera_data, dict):
-            camera_obj = CameraSetting.objects.create(user=validated_data.get('user'),
-                                                      camera_type=camera_data.get('camera_type'),
-                                                      iso=camera_data.get('iso'),
-                                                      shutter_speed=camera_data.get('shutter_speed'),
-                                                      fps=camera_data.get('fps'),
-                                                      lens_type=camera_data.get('lens_type'),
-                                                      focal_length=camera_data.get('focal_length'),
-                                                      aperture=camera_data.get('aperture', 'None'),
-                                                      question_field_one=camera_data.get('question_field_one'),
-                                                      question_field_two=camera_data.get('question_field_two'),
-                                                      is_profile_camera_settings=False)
-        else:
-            try:
-                camera_obj = CameraSetting.objects.get(pk=camera_data)
-            except CameraSetting.DoesNotExist:
-                camera_obj = None
+        # if isinstance(camera_data, dict):
+        camera_obj = CameraSetting.objects.create(user=validated_data.get('user'),
+                                                  camera_type=camera_data.get('camera_type'),
+                                                  iso=camera_data.get('iso'),
+                                                  shutter_speed=camera_data.get('shutter_speed'),
+                                                  fps=camera_data.get('fps'),
+                                                  lens_type=camera_data.get('lens_type'),
+                                                  focal_length=camera_data.get('focal_length'),
+                                                  aperture=camera_data.get('aperture', 'None'),
+                                                  question_field_one=camera_data.get('question_field_one'),
+                                                  question_field_two=camera_data.get('question_field_two'),
+                                                  is_profile_camera_settings=False)
+        # else:
+        #     try:
+        #         camera_obj = CameraSetting.objects.get(pk=camera_data)
+        #     except CameraSetting.DoesNotExist:
+        #         camera_obj = None
 
         observation = Observation.objects.create(**validated_data, is_submit=submit_flag, camera=camera_obj)
 
