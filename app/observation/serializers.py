@@ -108,7 +108,6 @@ class ObservationSerializer(serializers.ModelSerializer):
         # for i in obj:
         serialize_data = ObservationImageSerializer(obj, many=True).data
         for i in serialize_data:
-            i['image'] = None
             i['category_map'] = {}
             i['category_map']['category'] = self.get_category(data)
         return serialize_data
