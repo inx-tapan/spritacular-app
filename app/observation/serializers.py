@@ -89,7 +89,7 @@ class ObservationSerializer(serializers.ModelSerializer):
     camera = serializers.PrimaryKeyRelatedField(queryset=CameraSetting.objects.all(), allow_null=True, required=False)
     images = serializers.SerializerMethodField('get_image', read_only=True)
     user_data = serializers.SerializerMethodField('get_user', read_only=True)
-    category_data = serializers.SerializerMethodField('get_category', read_only=True)
+    category_data = serializers.SerializerMethodField('get_category_name', read_only=True)
     camera_data = serializers.SerializerMethodField('get_camera', read_only=True)
 
     class Meta:
@@ -119,6 +119,10 @@ class ObservationSerializer(serializers.ModelSerializer):
     def get_category(self, data):
         obj = ObservationCategoryMapping.objects.filter(observation=data)
         return [i.category.id for i in obj]
+
+    def get_category_name(self, data):
+        obj = ObservationCategoryMapping.objects.filter(observation=data)
+        return [i.category.title for i in obj]
 
     def get_camera(self, data):
         return CameraSettingSerializer(data.camera).data
