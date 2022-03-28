@@ -253,20 +253,27 @@ class ObservationSerializer(serializers.ModelSerializer):
         for tle in category_data.get('category'):
             ObservationCategoryMapping.objects.create(observation_id=instance.id, category=tle)
 
-        map_obj = ObservationImageMapping.objects.filter(observation=instance).order_by('pk')
-        for i in map_obj:
-            i.image = image_data[0].get('image')
-            i.location = image_data[0].get('location')
-            i.timezone = image_data[0].get('timezone')
-            i.longitude = image_data[0].get('longitude')
-            i.latitude = image_data[0].get('latitude')
-            i.azimuth = image_data[0].get('azimuth')
-            i.obs_date = image_data[0].get('obs_date')
-            i.obs_time = image_data[0].get('obs_time')
-            i.is_precise_azimuth = image_data[0].get('is_precise_azimuth')
-            i.time_accuracy = image_data[0].get('time_accuracy')
-            i.save()
-            i.set_utc()
+        if validated_data.get('image_type') != 3:
+            map_obj = ObservationImageMapping.objects.filter(observation=instance).order_by('pk')
+            for i in map_obj:
+                i.image = image_data[0].get('image')
+                i.location = image_data[0].get('location')
+                i.timezone = image_data[0].get('timezone')
+                i.longitude = image_data[0].get('longitude')
+                i.latitude = image_data[0].get('latitude')
+                i.azimuth = image_data[0].get('azimuth')
+                i.obs_date = image_data[0].get('obs_date')
+                i.obs_time = image_data[0].get('obs_time')
+                i.is_precise_azimuth = image_data[0].get('is_precise_azimuth')
+                i.time_accuracy = image_data[0].get('time_accuracy')
+                i.save()
+                i.set_utc()
+
+        else:
+            ObservationImageMapping.objects.filter(observation=instance).delete()
+            for i in image_data:
+                obs_image_map_obj = ObservationImageMapping.objects.create(**i, observation=instance)
+                obs_image_map_obj.set_utc()
 
         # TODO: submit draft or update draft
         return instance

@@ -54,7 +54,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             'place_uid': self.user.place_uid,
             'country_code': self.user.country_code,
             'is_first_login': self.user.is_first_login,
-            'profile_image': self.user.profile_image.url if self.user.profile_image else None
+            'profile_image': self.user.profile_image.url if self.user.profile_image else None,
+            'location_metadata': self.user.location_metadata
         }
 
         if self.user.is_first_login:
@@ -79,11 +80,12 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     profile_image = serializers.ImageField(required=False,
                                            validators=[FileExtensionValidator(['jpg', 'tiff', 'png', 'jpeg'])])
     password = serializers.CharField(style={'input_type': 'password'}, write_only=True)
+    location_metadata = serializers.JSONField(allow_null=True)
 
     class Meta:
         model = User
         fields = ('id', 'first_name', 'last_name', 'email', 'password', 'location',
-                  'country_code', 'place_uid', 'profile_image')
+                  'country_code', 'place_uid', 'profile_image', 'location_metadata')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -102,7 +104,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
                                    profile_image=validated_data.get('profile_image', ''),
                                    country_code=validated_data.get('country_code'),
                                    place_uid=validated_data.get('place_uid'),
-                                   is_first_login=True)
+                                   is_first_login=True, location_metadata=validated_data.get('location_metadata'))
         user.set_password(validated_data['password'])
         user.save()
 
