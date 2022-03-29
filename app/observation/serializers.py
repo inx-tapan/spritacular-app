@@ -285,8 +285,13 @@ class ObservationSerializer(serializers.ModelSerializer):
 
 class ObservationCommentSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    user_data = serializers.SerializerMethodField('get_user_data', read_only=True)
 
     class Meta:
         model = ObservationComment
         fields = '__all__'
+
+    def get_user_data(self, data):
+        user_obj = data.user
+        return UserRegisterSerializer(user_obj).data
 

@@ -1,5 +1,6 @@
 import json
 
+from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -173,7 +174,21 @@ class ObservationCommentViewSet(viewsets.ModelViewSet):
     CRUD operations for observation comments
     """
     serializer_class = ObservationCommentSerializer
-    queryset = ObservationComment.objects.all()
     permission_classes = (IsAuthenticated,)
 
+    def list(self, request, *args, **kwargs):
+        observation = get_object_or_404(Observation, pk=kwargs.get('pk'))
+        observation_comment_obj = ObservationComment.objects.filter(observation=observation)
+        serializer = self.serializer_class(observation_comment_obj, many=True)
+        return Response({'data': serializer.data, 'status': 1}, status=status.HTTP_200_OK)
+
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        data['observation'] = kwargs.get('pk')
+        serializer = self.serializer_class(data=data, context={'request': request})
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response({'data': serializer.data, 'status': 1}, status=status.HTTP_200_OK)
+
+        return Response({'data': serializer.data, 'status': 1}, status=status.HTTP_200_OK)
 
