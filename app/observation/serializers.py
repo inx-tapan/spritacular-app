@@ -7,6 +7,7 @@ from .models import ObservationImageMapping, Observation, Category, ObservationC
 from users.models import CameraSetting
 from users.serializers import UserRegisterSerializer, CameraSettingSerializer
 from constants import FIELD_REQUIRED, SINGLE_IMAGE_VALID, MULTIPLE_IMAGE_VALID
+from observation.tasks import observation_image_compression
 
 
 class ImageMetadataSerializer(serializers.Serializer):
@@ -75,6 +76,8 @@ class ObservationCategorySerializer(serializers.ModelSerializer):
 class ObservationImageSerializer(serializers.ModelSerializer):
     image = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'png', 'jpeg'])], allow_null=True)
     category_map = ObservationCategorySerializer(required=False)
+    # latitude = serializers.DecimalField(coerce_to_string=False, max_digits=22, decimal_places=16, allow_null=True)
+    # longitude = serializers.DecimalField(coerce_to_string=False, max_digits=22, decimal_places=16, allow_null=True)
 
     class Meta:
         model = ObservationImageMapping
@@ -114,7 +117,9 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     def get_user(self, data):
         user = data.user
-        return UserRegisterSerializer(user).data
+        serializer = UserRegisterSerializer(user).data
+        serializer['camera_data'] = self.get_camera(data)
+        return serializer
 
     def get_category(self, data):
         obj = ObservationCategoryMapping.objects.filter(observation=data)
@@ -200,6 +205,7 @@ class ObservationSerializer(serializers.ModelSerializer):
 
             obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
             obs_image_map_obj.set_utc()
+            # observation_image_compression.delay(obs_image_map_obj.id)
 
         return observation
 

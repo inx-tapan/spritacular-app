@@ -34,6 +34,7 @@ class Observation(BaseModel):
 class ObservationImageMapping(BaseModel):
     observation = models.ForeignKey(Observation, on_delete=models.CASCADE)
     image = models.ImageField(upload_to='observation_image')
+    compressed_image = models.ImageField(upload_to='compressed_observation_image', null=True, blank=True)
     location = models.CharField(max_length=256, null=True, blank=True)
     place_uid = models.CharField(max_length=256, null=True, blank=True)
     country_code = models.CharField(max_length=10, null=True, blank=True)
