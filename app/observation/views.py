@@ -5,8 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import (ImageMetadataSerializer, ObservationSerializer, ObservationCommentSerializer,
-                          ObservationLikeSerializer)
+from .serializers import (ImageMetadataSerializer, ObservationSerializer, ObservationCommentSerializer)
 from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
 from .models import Observation, Category, ObservationComment, ObservationLike
@@ -195,7 +194,6 @@ class ObservationCommentViewSet(viewsets.ModelViewSet):
 
 
 class ObservationLikeViewSet(APIView):
-    serializer_class = ObservationLikeSerializer
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
