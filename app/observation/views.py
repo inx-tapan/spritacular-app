@@ -5,10 +5,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import ImageMetadataSerializer, ObservationSerializer, ObservationCommentSerializer
+from .serializers import (ImageMetadataSerializer, ObservationSerializer, ObservationCommentSerializer,
+                          ObservationLikeSerializer)
 from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
-from .models import Observation, Category, ObservationComment
+from .models import Observation, Category, ObservationComment, ObservationLike
 from constants import NOT_FOUND, OBS_FORM_SUCCESS
 
 
@@ -191,4 +192,26 @@ class ObservationCommentViewSet(viewsets.ModelViewSet):
             return Response({'data': serializer.data, 'status': 1}, status=status.HTTP_200_OK)
 
         return Response({'data': serializer.data, 'status': 1}, status=status.HTTP_200_OK)
+
+
+class ObservationLikeViewSet(APIView):
+    serializer_class = ObservationLikeSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        data = request.data
+        print(data)
+        if data.get('is_like') == '1':
+            # Observation Like
+            if not ObservationLike.objects.filter(observation_id=kwargs.get('pk'), user=request.user).exists():
+                ObservationLike.objects.create(observation_id=kwargs.get('pk'), user=request.user)
+            else:
+                return Response({'status': 0}, status=status.HTTP_400_BAD_REQUEST)
+
+        else:
+            # Observation Dislike
+            ObservationLike.objects.filter(observation_id=kwargs.get('pk'), user=request.user).delete()
+
+        like_count = ObservationLike.objects.filter(observation_id=kwargs.get('pk')).count()
+        return Response({'like_count': like_count, 'status': 1}, status=status.HTTP_200_OK)
 

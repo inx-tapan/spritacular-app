@@ -74,7 +74,26 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
 
     def get_user_details(self, request, *args, **kwargs):
         user = request.user
-        return Response(self.serializer_class(user).data, status=status.HTTP_200_OK)
+        serializer = self.serializer_class(user).data
+
+        try:
+            camera_obj = CameraSetting.objects.get(user=user, is_profile_camera_settings=True)
+            camera = {
+                'camera_type': camera_obj.camera_type,
+                'iso': camera_obj.iso,
+                'shutter_speed': camera_obj.shutter_speed,
+                'fps': camera_obj.fps,
+                'lens_type': camera_obj.lens_type,
+                'focal_length': camera_obj.focal_length,
+                'aperture': camera_obj.aperture,
+                'question_field_one': camera_obj.question_field_one,
+                'question_field_two': camera_obj.question_field_two
+            }
+        except CameraSetting.DoesNotExist:
+            camera = None
+
+        serializer['camera'] = camera
+        return Response(serializer, status=status.HTTP_200_OK)
 
 
 class CustomObtainTokenPairView(TokenObtainPairView):
