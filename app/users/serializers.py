@@ -43,6 +43,22 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         refresh = self.get_token(self.user)
 
+        try:
+            camera_obj = CameraSetting.objects.get(user=self.user, is_profile_camera_settings=True)
+            camera = {
+                'camera_type': camera_obj.camera_type,
+                'iso': camera_obj.iso,
+                'shutter_speed': camera_obj.shutter_speed,
+                'fps': camera_obj.fps,
+                'lens_type': camera_obj.lens_type,
+                'focal_length': camera_obj.focal_length,
+                'aperture': camera_obj.aperture,
+                'question_field_one': camera_obj.question_field_one,
+                'question_field_two': camera_obj.question_field_two
+            }
+        except CameraSetting.DoesNotExist:
+            camera = None
+
         data = {
             'refresh': str(refresh),
             'access': str(refresh.access_token),
@@ -55,7 +71,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             'country_code': self.user.country_code,
             'is_first_login': self.user.is_first_login,
             'profile_image': self.user.profile_image.url if self.user.profile_image else None,
-            'location_metadata': self.user.location_metadata
+            'location_metadata': self.user.location_metadata,
+            'camera': camera
         }
 
         if self.user.is_first_login:

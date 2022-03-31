@@ -117,9 +117,7 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     def get_user(self, data):
         user = data.user
-        serializer = UserRegisterSerializer(user).data
-        serializer['camera_data'] = self.get_camera(data)
-        return serializer
+        return UserRegisterSerializer(user).data
 
     def get_category(self, data):
         obj = ObservationCategoryMapping.objects.filter(observation=data)
