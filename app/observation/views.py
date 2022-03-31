@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from .serializers import (ImageMetadataSerializer, ObservationSerializer, ObservationCommentSerializer)
 from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
-from .models import Observation, Category, ObservationComment, ObservationLike
+from .models import Observation, Category, ObservationComment, ObservationLike, ObservationWatchCount
 from constants import NOT_FOUND, OBS_FORM_SUCCESS
 
 
@@ -198,7 +198,6 @@ class ObservationLikeViewSet(APIView):
 
     def post(self, request, *args, **kwargs):
         data = request.data
-        print(data)
         if data.get('is_like') == '1':
             # Observation Like
             if not ObservationLike.objects.filter(observation_id=kwargs.get('pk'), user=request.user).exists():
@@ -212,4 +211,16 @@ class ObservationLikeViewSet(APIView):
 
         like_count = ObservationLike.objects.filter(observation_id=kwargs.get('pk')).count()
         return Response({'like_count': like_count, 'status': 1}, status=status.HTTP_200_OK)
+
+
+class ObservationWatchCountViewSet(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        if not ObservationWatchCount.objects.filter(observation_id=kwargs.get('pk'), user=request.user).exists():
+            ObservationWatchCount.objects.create(observation_id=kwargs.get('pk'), user=request.user)
+
+        watch_count = ObservationWatchCount.objects.filter(observation_id=kwargs.get('pk')).count()
+
+        return Response({'watch_count': watch_count, 'status': 1}, status=status.HTTP_200_OK)
 

@@ -101,6 +101,14 @@ class ObservationLike(BaseModel):
         db_table = 'observation_like'
 
 
+class ObservationWatchCount(BaseModel):
+    observation = models.ForeignKey(Observation, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = 'observation_watch_count'
+
+
 class VerifyObservation(BaseModel):
     observation = models.ForeignKey(Observation, on_delete=models.CASCADE)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)

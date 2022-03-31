@@ -7,7 +7,7 @@ from .models import ObservationImageMapping, Observation, Category, ObservationC
 from users.models import CameraSetting
 from users.serializers import UserRegisterSerializer, CameraSettingSerializer
 from constants import FIELD_REQUIRED, SINGLE_IMAGE_VALID, MULTIPLE_IMAGE_VALID
-from observation.tasks import observation_image_compression
+# from observation.tasks import observation_image_compression
 
 
 class ImageMetadataSerializer(serializers.Serializer):
