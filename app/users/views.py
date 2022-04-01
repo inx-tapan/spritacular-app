@@ -1,4 +1,3 @@
-# from django.contrib.auth import login, logout
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
@@ -33,8 +32,14 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         permission_classes = []
         print(f"ACTION {self.action}")
-        if self.action == 'retrieve' or self.action == 'patch' or self.action == 'profile_update'\
-                or self.action == 'put' or self.action == 'update_user_profile' or self.action == 'get_user_details':
+        if self.action in [
+            'retrieve',
+            'patch',
+            'profile_update',
+            'put',
+            'update_user_profile',
+            'get_user_details',
+        ]:
             permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
         return [permission() for permission in permission_classes]
 
@@ -69,11 +74,29 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
 
     def get_user_details(self, request, *args, **kwargs):
         user = request.user
-        return Response(self.serializer_class(user).data, status=status.HTTP_200_OK)
+        serializer = self.serializer_class(user).data
+
+        try:
+            camera_obj = CameraSetting.objects.get(user=user, is_profile_camera_settings=True)
+            camera = {
+                'camera_type': camera_obj.camera_type,
+                'iso': camera_obj.iso,
+                'shutter_speed': camera_obj.shutter_speed,
+                'fps': camera_obj.fps,
+                'lens_type': camera_obj.lens_type,
+                'focal_length': camera_obj.focal_length,
+                'aperture': camera_obj.aperture,
+                'question_field_one': camera_obj.question_field_one,
+                'question_field_two': camera_obj.question_field_two
+            }
+        except CameraSetting.DoesNotExist:
+            camera = None
+
+        serializer['camera'] = camera
+        return Response(serializer, status=status.HTTP_200_OK)
 
 
 class CustomObtainTokenPairView(TokenObtainPairView):
-    # permission_classes = (permissions.AllowAny,)
     serializer_class = MyTokenObtainPairSerializer
 
 
@@ -143,7 +166,6 @@ class CameraSettingsApiView(viewsets.ModelViewSet):
         Adding is_profile_camera_settings filter in the query.
         :return: Authenticated user CameraSetting object if exists else 404.
         """
-        print(f"--{self.action}")
         try:
             return CameraSetting.objects.get(user_id=self.request.user.id, is_profile_camera_settings=True)
         except CameraSetting.DoesNotExist:

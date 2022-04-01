@@ -34,6 +34,7 @@ class Observation(BaseModel):
 class ObservationImageMapping(BaseModel):
     observation = models.ForeignKey(Observation, on_delete=models.CASCADE)
     image = models.ImageField(upload_to='observation_image')
+    compressed_image = models.ImageField(upload_to='compressed_observation_image', null=True, blank=True)
     location = models.CharField(max_length=256, null=True, blank=True)
     place_uid = models.CharField(max_length=256, null=True, blank=True)
     country_code = models.CharField(max_length=10, null=True, blank=True)
@@ -42,7 +43,7 @@ class ObservationImageMapping(BaseModel):
     obs_date = models.DateField(null=True, blank=True)
     obs_time = models.TimeField(null=True, blank=True)
     obs_date_time_as_per_utc = models.DateTimeField(null=True, blank=True)
-    timezone = models.CharField(max_length=20, null=True, blank=True)
+    timezone = models.CharField(max_length=50, null=True, blank=True)
     azimuth = models.CharField(max_length=10, null=True, blank=True)
     is_precise_azimuth = models.BooleanField(default=False)
     time_accuracy = models.CharField(max_length=20, null=True, blank=True)
@@ -98,6 +99,14 @@ class ObservationLike(BaseModel):
 
     class Meta:
         db_table = 'observation_like'
+
+
+class ObservationWatchCount(BaseModel):
+    observation = models.ForeignKey(Observation, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = 'observation_watch_count'
 
 
 class VerifyObservation(BaseModel):

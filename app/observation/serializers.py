@@ -3,10 +3,11 @@ from rest_framework import serializers
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
 from .utils import dms_coordinates_to_dd_coordinates
-from .models import ObservationImageMapping, Observation, Category, ObservationCategoryMapping
+from .models import ObservationImageMapping, Observation, Category, ObservationCategoryMapping, ObservationComment
 from users.models import CameraSetting
 from users.serializers import UserRegisterSerializer, CameraSettingSerializer
-from constants import FIELD_REQUIRED
+from constants import FIELD_REQUIRED, SINGLE_IMAGE_VALID, MULTIPLE_IMAGE_VALID
+# from observation.tasks import observation_image_compression
 
 
 class ImageMetadataSerializer(serializers.Serializer):
@@ -30,8 +31,6 @@ class ImageMetadataSerializer(serializers.Serializer):
                         exif[TAGS[tag]] = value
 
             trash_data = ['MakerNote', 'UserComment', 'ImageDescription']
-            # required_data = ['GPSInfo', 'FocalLength', 'FocalLengthIn35mmFilm', 'ISOSpeedRatings',
-            #                  'ExposureTime', 'Make', 'DateTime', 'ApertureValue']
 
             for i in trash_data:
                 if i in exif:
@@ -75,13 +74,16 @@ class ObservationCategorySerializer(serializers.ModelSerializer):
 
 
 class ObservationImageSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'png', 'jpeg'])])
+    image = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'png', 'jpeg'])], allow_null=True)
     category_map = ObservationCategorySerializer(required=False)
+    # latitude = serializers.DecimalField(coerce_to_string=False, max_digits=22, decimal_places=16, allow_null=True)
+    # longitude = serializers.DecimalField(coerce_to_string=False, max_digits=22, decimal_places=16, allow_null=True)
 
     class Meta:
         model = ObservationImageMapping
-        fields = ('image', 'location', 'place_uid', 'country_code', 'latitude', 'longitude', 'obs_date', 'obs_time',
-                  'timezone', 'azimuth', 'category_map', 'obs_date_time_as_per_utc')
+        fields = ('id', 'image', 'location', 'place_uid', 'country_code', 'latitude', 'longitude', 'obs_date', 'obs_time',
+                  'timezone', 'azimuth', 'category_map', 'obs_date_time_as_per_utc', 'time_accuracy',
+                  'is_precise_azimuth')
 
 
 class ObservationSerializer(serializers.ModelSerializer):
@@ -90,13 +92,13 @@ class ObservationSerializer(serializers.ModelSerializer):
     camera = serializers.PrimaryKeyRelatedField(queryset=CameraSetting.objects.all(), allow_null=True, required=False)
     images = serializers.SerializerMethodField('get_image', read_only=True)
     user_data = serializers.SerializerMethodField('get_user', read_only=True)
-    category_data = serializers.SerializerMethodField('get_category', read_only=True)
+    category_data = serializers.SerializerMethodField('get_category_name', read_only=True)
     camera_data = serializers.SerializerMethodField('get_camera', read_only=True)
 
     class Meta:
         model = Observation
-        fields = ('user', 'image_type', 'camera', 'map_data', 'elevation_angle', 'video_url', 'story', 'images',
-                  'user_data', 'is_verified', 'category_data', 'camera_data')
+        fields = ('id', 'user', 'image_type', 'camera', 'map_data', 'elevation_angle', 'video_url', 'story', 'images',
+                  'user_data', 'is_verified', 'category_data', 'camera_data', 'is_submit', 'is_reject')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -106,13 +108,22 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     def get_image(self, data):
         obj = ObservationImageMapping.objects.filter(observation=data)
-        return ObservationImageSerializer(obj, many=True).data
+        # for i in obj:
+        serialize_data = ObservationImageSerializer(obj, many=True).data
+        for i in serialize_data:
+            i['category_map'] = {}
+            i['category_map']['category'] = self.get_category(data)
+        return serialize_data
 
     def get_user(self, data):
         user = data.user
         return UserRegisterSerializer(user).data
 
     def get_category(self, data):
+        obj = ObservationCategoryMapping.objects.filter(observation=data)
+        return [i.category.id for i in obj]
+
+    def get_category_name(self, data):
         obj = ObservationCategoryMapping.objects.filter(observation=data)
         return [i.category.title for i in obj]
 
@@ -148,15 +159,19 @@ class ObservationSerializer(serializers.ModelSerializer):
 
                 elif not i['obs_date']:
                     is_error_flag = True
-                    error_field[count]['obs_date'] = FIELD_REQUIRED.format("Obs_date")
+                    error_field[count]['obs_date'] = FIELD_REQUIRED.format("Observation date")
 
                 elif not i['obs_time']:
                     is_error_flag = True
-                    error_field[count]['obs_time'] = FIELD_REQUIRED.format("Obs_time")
+                    error_field[count]['obs_time'] = FIELD_REQUIRED.format("Observation time")
 
                 elif not i['azimuth']:
                     is_error_flag = True
                     error_field[count]['azimuth'] = FIELD_REQUIRED.format("Azimuth")
+
+                elif (i['azimuth'] and i['azimuth'].isdigit()) and int(i['azimuth']) > 360:
+                    is_error_flag = True
+                    error_field[count]['azimuth'] = 'Azimuth angle should not be more than 360°.'
 
             if is_error_flag:
                 raise serializers.ValidationError(error_field, code=400)
@@ -166,6 +181,7 @@ class ObservationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         image_data = validated_data.pop('map_data')
         camera_data = self.context.get('camera_data')
+        # Flag for submit or draft request
         submit_flag = self.context.get('is_draft') is None
         observation = None
 
@@ -181,40 +197,43 @@ class ObservationSerializer(serializers.ModelSerializer):
             if image_data[i].get('category_map'):
                 category_data = image_data[i].pop('category_map')
                 for tle in category_data['category']:
-                    ObservationCategoryMapping.objects.create(observation_id=observation.id, category=tle)
+                    if not ObservationCategoryMapping.objects.filter(observation_id=observation.id,
+                                                                     category=tle).exists():
+                        ObservationCategoryMapping.objects.create(observation_id=observation.id, category=tle)
 
             obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
             obs_image_map_obj.set_utc()
+            # observation_image_compression.delay(obs_image_map_obj.id)
 
         return observation
 
     @staticmethod
     def validate_image_length(validated_data, image_data):
         if validated_data.get('image_type') == 1 and len(image_data) > 1:
-            raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
+            raise serializers.ValidationError(SINGLE_IMAGE_VALID, code=400)
 
-        elif (validated_data.get('image_type') == 2 or validated_data.get('image_type') == 3) and len(image_data) > 3:
-            raise serializers.ValidationError('Number of the images should not be more than 3', code=400)
+        elif validated_data.get('image_type') in [2, 3] and len(image_data) > 3:
+            raise serializers.ValidationError(MULTIPLE_IMAGE_VALID, code=400)
 
     @staticmethod
     def create_camera_observation(camera_data, validated_data, submit_flag):
-        if isinstance(camera_data, dict):
-            camera_obj = CameraSetting.objects.create(user=validated_data.get('user'),
-                                                      camera_type=camera_data.get('camera_type'),
-                                                      iso=camera_data.get('iso'),
-                                                      shutter_speed=camera_data.get('shutter_speed'),
-                                                      fps=camera_data.get('fps'),
-                                                      lens_type=camera_data.get('lens_type'),
-                                                      focal_length=camera_data.get('focal_length'),
-                                                      aperture=camera_data.get('aperture', 'None'),
-                                                      question_field_one=camera_data.get('question_field_one'),
-                                                      question_field_two=camera_data.get('question_field_two'),
-                                                      is_profile_camera_settings=False)
-        else:
-            try:
-                camera_obj = CameraSetting.objects.get(pk=camera_data)
-            except CameraSetting.DoesNotExist:
-                camera_obj = None
+        # if isinstance(camera_data, dict):
+        camera_obj = CameraSetting.objects.create(user=validated_data.get('user'),
+                                                  camera_type=camera_data.get('camera_type'),
+                                                  iso=camera_data.get('iso'),
+                                                  shutter_speed=camera_data.get('shutter_speed'),
+                                                  fps=camera_data.get('fps'),
+                                                  lens_type=camera_data.get('lens_type'),
+                                                  focal_length=camera_data.get('focal_length'),
+                                                  aperture=camera_data.get('aperture', 'None'),
+                                                  question_field_one=camera_data.get('question_field_one'),
+                                                  question_field_two=camera_data.get('question_field_two'),
+                                                  is_profile_camera_settings=False)
+        # else:
+        #     try:
+        #         camera_obj = CameraSetting.objects.get(pk=camera_data)
+        #     except CameraSetting.DoesNotExist:
+        #         camera_obj = None
 
         observation = Observation.objects.create(**validated_data, is_submit=submit_flag, camera=camera_obj)
 
@@ -222,36 +241,62 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         image_data = validated_data.pop('map_data')
+        # Flag for submit or draft request
         submit_flag = self.context.get('is_draft') is None
 
-        if validated_data.get('image_type') == 1 and len(image_data) > 1:
-            raise serializers.ValidationError('Number of the images should not be more than 1.', code=400)
+        if validated_data.get('image_type') in [1, 2] and len(image_data) > 1:
+            raise serializers.ValidationError(SINGLE_IMAGE_VALID, code=400)
 
-        elif validated_data.get('image_type') == 2 and len(image_data) > 1:
-            raise serializers.ValidationError('Number of the images should not be more than 1', code=400)
+        elif validated_data.get('image_type') == 3 and len(image_data) > 3:
+            raise serializers.ValidationError(MULTIPLE_IMAGE_VALID, code=400)
 
         # if submit
         instance.is_submit = submit_flag
         instance.save()
 
         category_data = image_data[0].get('category_map')
+        # Deleting all previously selected tle
         ObservationCategoryMapping.objects.filter(observation=instance).delete()
 
         for tle in category_data.get('category'):
             ObservationCategoryMapping.objects.create(observation_id=instance.id, category=tle)
 
-        map_obj = ObservationImageMapping.objects.filter(observation=instance).order_by('pk')
-        for i in map_obj:
-            i.image = image_data[0].get('image')
-            i.location = image_data[0].get('location')
-            i.timezone = image_data[0].get('timezone')
-            i.longitude = image_data[0].get('longitude')
-            i.latitude = image_data[0].get('latitude')
-            i.azimuth = image_data[0].get('azimuth')
-            i.obs_date = image_data[0].get('obs_date')
-            i.obs_time = image_data[0].get('obs_time')
-            i.save()
-            i.set_utc()
+        if validated_data.get('image_type') != 3:
+            map_obj = ObservationImageMapping.objects.filter(observation=instance).order_by('pk')
+            for i in map_obj:
+                i.image = image_data[0].get('image')
+                i.location = image_data[0].get('location')
+                i.timezone = image_data[0].get('timezone')
+                i.longitude = image_data[0].get('longitude')
+                i.latitude = image_data[0].get('latitude')
+                i.azimuth = image_data[0].get('azimuth')
+                i.obs_date = image_data[0].get('obs_date')
+                i.obs_time = image_data[0].get('obs_time')
+                i.is_precise_azimuth = image_data[0].get('is_precise_azimuth')
+                i.time_accuracy = image_data[0].get('time_accuracy')
+                i.save()
+                i.set_utc()
+
+        else:
+            ObservationImageMapping.objects.filter(observation=instance).delete()
+            for i in image_data:
+                i.pop('category_map')
+                obs_image_map_obj = ObservationImageMapping.objects.create(**i, observation=instance)
+                obs_image_map_obj.set_utc()
 
         # TODO: submit draft or update draft
         return instance
+
+
+class ObservationCommentSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    user_data = serializers.SerializerMethodField('get_user_data', read_only=True)
+
+    class Meta:
+        model = ObservationComment
+        fields = '__all__'
+
+    def get_user_data(self, data):
+        user_obj = data.user
+        return UserRegisterSerializer(user_obj).data
+
