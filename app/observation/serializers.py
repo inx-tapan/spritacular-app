@@ -280,6 +280,7 @@ class ObservationSerializer(serializers.ModelSerializer):
         else:
             ObservationImageMapping.objects.filter(observation=instance).delete()
             for i in image_data:
+                i.pop('category_map')
                 obs_image_map_obj = ObservationImageMapping.objects.create(**i, observation=instance)
                 obs_image_map_obj.set_utc()
 
