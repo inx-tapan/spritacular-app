@@ -213,3 +213,25 @@ AWS_DEFAULT_ACL = config('AWS_DEFAULT_ACL')
 AWS_S3_FILE_OVERWRITE = False  # for handling files with duplicate names
 
 FRONTEND_URL = config('FRONTEND_URL')
+
+# settings related to redis
+# CACHE_TTL = 60 * 60  # Cache time to live is 60 minutes.
+
+# CACHES = {
+#     "default": {
+#         "BACKEND": config('CACHE_BACKEND'),
+#         "LOCATION": config('CACHE_LOCATION'),
+#         "OPTIONS": {
+#             "CLIENT_CLASS": config('CLIENT_CLASS')
+#         },
+#         "KEY_PREFIX": config('KEY_PREFIX')
+#     }
+# }
+
+
+# CELERY STUFF
+# CELERY_BROKER_URL = config('CELERY_BROKER_URL')
+# CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND')
+# CELERY_ACCEPT_CONTENT = ['application/json']
+# CELERY_TASK_SERIALIZER = 'json'
+# CELERY_RESULT_SERIALIZER = 'json'

@@ -1,5 +1,6 @@
 from django.urls import path
-from .views import ImageMetadataViewSet, UploadObservationViewSet, CategoryViewSet
+from .views import (ImageMetadataViewSet, UploadObservationViewSet, CategoryViewSet, ObservationCommentViewSet,
+                    ObservationLikeViewSet, ObservationWatchCountViewSet)
 
 urlpatterns = [
     # EXIF data from image.
@@ -12,5 +13,12 @@ urlpatterns = [
          name="update_observation"),
     path('observation_collection/', UploadObservationViewSet.as_view({'get': 'user_observation_collection'}),
          name="update_observation"),
-    path('get_draft_data/<int:pk>/', UploadObservationViewSet.as_view({'get': 'get_draft_data'}), name="get_draft_data")
+    path('get_draft_data/<int:pk>/', UploadObservationViewSet.as_view({'get': 'retrieve'}), name="get_draft_data"),
+    # Observation Comment
+    path('comment/<int:pk>/', ObservationCommentViewSet.as_view({'get': 'list', 'post': 'create'}),
+         name="observation_comment"),
+    # Observation Like
+    path('like/<int:pk>/', ObservationLikeViewSet.as_view(), name="observation_like"),
+    # Observation Watch Count
+    path('watch_count/<int:pk>/', ObservationWatchCountViewSet.as_view(), name="observation_watch_count")
 ]

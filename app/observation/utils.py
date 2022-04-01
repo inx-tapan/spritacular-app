@@ -7,7 +7,7 @@ def dms_coordinates_to_dd_coordinates(coordinates, coordinates_ref):
                       coordinates[1] / 60 + \
                       coordinates[2] / 3600
 
-    if coordinates_ref == "S" or coordinates_ref == "W":
+    if coordinates_ref in ["S", "W"]:
         decimal_degrees = -decimal_degrees
 
     return float(decimal_degrees)
