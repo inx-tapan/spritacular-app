@@ -135,9 +135,12 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     def get_like_watch_count_data(self, data):
         like_count = ObservationLike.objects.filter(observation=data).count()
-        is_like = ObservationLike.objects.filter(observation=data, user=self.context.get('request').user).exists()
-        is_watch = ObservationWatchCount.objects.filter(observation=data,
-                                                        user=self.context.get('request').user).exists()
+        is_like = None
+        is_watch = None
+        if self.context.get('request').user.is_authenticated:
+            is_like = ObservationLike.objects.filter(observation=data, user=self.context.get('request').user).exists()
+            is_watch = ObservationWatchCount.objects.filter(observation=data,
+                                                            user=self.context.get('request').user).exists()
         watch_count = ObservationWatchCount.objects.filter(observation=data).count()
 
         return {'like_count': like_count, 'is_like': is_like, 'watch_count': watch_count, 'is_watch': is_watch}

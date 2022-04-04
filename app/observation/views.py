@@ -1,6 +1,8 @@
 import json
 
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,6 +12,7 @@ from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
 from .models import Observation, Category, ObservationComment, ObservationLike, ObservationWatchCount
 from constants import NOT_FOUND, OBS_FORM_SUCCESS
+from rest_framework.pagination import PageNumberPagination
 
 
 class ImageMetadataViewSet(APIView):
@@ -225,4 +228,35 @@ class ObservationWatchCountViewSet(APIView):
         watch_count = ObservationWatchCount.objects.filter(observation_id=kwargs.get('pk')).count()
 
         return Response({'watch_count': watch_count, 'status': 1}, status=status.HTTP_200_OK)
+
+
+class ObservationGalleryViewSet(ListAPIView):
+    pagination_class = PageNumberPagination
+
+    def get(self, request, *args, **kwargs):
+        data = request.query_params
+
+        filters = Q()
+        if data.get('country'):
+            filters = filters & Q(observationimagemapping__country_code__iexact=data.get('country'))
+        if data.get('category'):
+            filters = filters & Q(observationcategorymapping__category__title__iexact=data.get('category'))
+        if data.get('status') == 'verified':
+            filters = filters & Q(is_submit=True, is_verified=True)
+        if data.get('status') == 'unverified':
+            filters = filters & Q(is_submit=True, is_verified=False)
+
+        observation_filter = Observation.objects.filter(filters).order_by('-pk') if request.user.is_authenticated else\
+            Observation.objects.filter(is_submit=True, is_verified=True).order_by('-pk')
+
+        page = self.paginate_queryset(observation_filter)
+        if not page:
+            serializer = ObservationSerializer(observation_filter, many=True,
+                                               context={'user_observation_collection': True, 'request': request})
+            return Response({'data': serializer.data, 'status': 1}, status=status.HTTP_200_OK)
+
+        else:
+            serializer = ObservationSerializer(page, many=True, context={'user_observation_collection': True,
+                                                                         'request': request})
+            return self.get_paginated_response(serializer.data)
 
