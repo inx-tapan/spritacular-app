@@ -162,7 +162,8 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         draft_count = Observation.objects.filter(user=request.user, is_submit=False).count()
 
         observation = Observation.objects.filter(user=request.user).order_by('-pk')
-        serializer = self.serializer_class(observation, many=True, context={'user_observation_collection': True})
+        serializer = self.serializer_class(observation, many=True, context={'user_observation_collection': True,
+                                                                            'request': request})
 
         return Response({'data': serializer.data, 'verified_count': verified_count,
                          'unverified_count': unverified_count, 'denied_count': denied_count,
@@ -199,18 +200,19 @@ class ObservationLikeViewSet(APIView):
     def post(self, request, *args, **kwargs):
         data = request.data
         if data.get('is_like') == '1':
-            # Observation Like
-            if not ObservationLike.objects.filter(observation_id=kwargs.get('pk'), user=request.user).exists():
-                ObservationLike.objects.create(observation_id=kwargs.get('pk'), user=request.user)
-            else:
-                return Response({'status': 0}, status=status.HTTP_400_BAD_REQUEST)
+            if ObservationLike.objects.filter(observation_id=kwargs.get('pk'), user=request.user).exists():
+                like_count = ObservationLike.objects.filter(observation_id=kwargs.get('pk')).count()
+                return Response({'like_count': like_count, 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
 
+            ObservationLike.objects.create(observation_id=kwargs.get('pk'), user=request.user)
+            like_status = True
         else:
             # Observation Dislike
             ObservationLike.objects.filter(observation_id=kwargs.get('pk'), user=request.user).delete()
+            like_status = False
 
         like_count = ObservationLike.objects.filter(observation_id=kwargs.get('pk')).count()
-        return Response({'like_count': like_count, 'status': 1}, status=status.HTTP_200_OK)
+        return Response({'like_count': like_count, 'status': 1, 'like': like_status}, status=status.HTTP_200_OK)
 
 
 class ObservationWatchCountViewSet(APIView):

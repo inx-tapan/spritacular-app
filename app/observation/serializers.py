@@ -3,7 +3,8 @@ from rest_framework import serializers
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
 from .utils import dms_coordinates_to_dd_coordinates
-from .models import ObservationImageMapping, Observation, Category, ObservationCategoryMapping, ObservationComment
+from .models import (ObservationImageMapping, Observation, Category, ObservationCategoryMapping, ObservationComment,
+                     ObservationLike, ObservationWatchCount)
 from users.models import CameraSetting
 from users.serializers import UserRegisterSerializer, CameraSettingSerializer
 from constants import FIELD_REQUIRED, SINGLE_IMAGE_VALID, MULTIPLE_IMAGE_VALID
@@ -94,11 +95,13 @@ class ObservationSerializer(serializers.ModelSerializer):
     user_data = serializers.SerializerMethodField('get_user', read_only=True)
     category_data = serializers.SerializerMethodField('get_category_name', read_only=True)
     camera_data = serializers.SerializerMethodField('get_camera', read_only=True)
+    like_watch_count_data = serializers.SerializerMethodField('get_like_watch_count_data', read_only=True)
 
     class Meta:
         model = Observation
         fields = ('id', 'user', 'image_type', 'camera', 'map_data', 'elevation_angle', 'video_url', 'story', 'images',
-                  'user_data', 'is_verified', 'category_data', 'camera_data', 'is_submit', 'is_reject')
+                  'user_data', 'is_verified', 'category_data', 'camera_data', 'like_watch_count_data', 'is_submit',
+                  'is_reject')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -129,6 +132,15 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     def get_camera(self, data):
         return CameraSettingSerializer(data.camera).data
+
+    def get_like_watch_count_data(self, data):
+        like_count = ObservationLike.objects.filter(observation=data).count()
+        is_like = ObservationLike.objects.filter(observation=data, user=self.context.get('request').user).exists()
+        is_watch = ObservationWatchCount.objects.filter(observation=data,
+                                                        user=self.context.get('request').user).exists()
+        watch_count = ObservationWatchCount.objects.filter(observation=data).count()
+
+        return {'like_count': like_count, 'is_like': is_like, 'watch_count': watch_count, 'is_watch': is_watch}
 
     def validate(self, data):
         image_data = data.get('map_data')
