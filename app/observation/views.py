@@ -159,18 +159,38 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         return Response({'data': serializer.data, 'status': 1}, status=status.HTTP_200_OK)
 
     def user_observation_collection(self, request, *args, **kwargs):
+        data = request.query_params
+        filters = Q(user=request.user)
+        if data.get('type') == 'verified':
+            filters = filters & Q(is_submit=True, is_verified=True)
+        elif data.get('type') == 'unverified':
+            filters = filters & Q(is_submit=True, is_verified=False)
+        elif data.get('type') == 'denied':
+            filters = filters & Q(is_submit=True, is_reject=True)
+        elif data.get('type') == 'draft':
+            filters = filters & Q(is_submit=False)
+
         verified_count = Observation.objects.filter(user=request.user, is_verified=True, is_submit=True).count()
         unverified_count = Observation.objects.filter(user=request.user, is_verified=False, is_submit=True).count()
         denied_count = Observation.objects.filter(user=request.user, is_reject=True, is_submit=True).count()
         draft_count = Observation.objects.filter(user=request.user, is_submit=False).count()
 
-        observation = Observation.objects.filter(user=request.user).order_by('-pk')
-        serializer = self.serializer_class(observation, many=True, context={'user_observation_collection': True,
-                                                                            'request': request})
+        observation_filter = Observation.objects.filter(filters).order_by('-pk')
+        page = self.paginate_queryset(observation_filter)
+        if not page:
+            serializer = self.serializer_class(observation_filter, many=True,
+                                               context={'user_observation_collection': True, 'request': request})
 
-        return Response({'data': serializer.data, 'verified_count': verified_count,
-                         'unverified_count': unverified_count, 'denied_count': denied_count,
-                         'draft_count': draft_count}, status=status.HTTP_200_OK)
+            return Response({'results': {'data': serializer.data, 'verified_count': verified_count,
+                                         'unverified_count': unverified_count, 'denied_count': denied_count,
+                                         'draft_count': draft_count}}, status=status.HTTP_200_OK)
+        else:
+            serializer = self.serializer_class(page, many=True,
+                                               context={'user_observation_collection': True, 'request': request})
+
+            return self.get_paginated_response({'data': serializer.data, 'verified_count': verified_count,
+                                                'unverified_count': unverified_count, 'denied_count': denied_count,
+                                                'draft_count': draft_count})
 
 
 class ObservationCommentViewSet(viewsets.ModelViewSet):
@@ -247,16 +267,16 @@ class ObservationGalleryViewSet(ListAPIView):
             filters = filters & Q(is_submit=True, is_verified=False)
 
         observation_filter = Observation.objects.filter(filters).order_by('-pk') if request.user.is_authenticated else\
-            Observation.objects.filter(is_submit=True, is_verified=True).order_by('-pk')
+            Observation.objects.filter(is_submit=True).order_by('-pk')
 
         page = self.paginate_queryset(observation_filter)
         if not page:
             serializer = ObservationSerializer(observation_filter, many=True,
                                                context={'user_observation_collection': True, 'request': request})
-            return Response({'data': serializer.data, 'status': 1}, status=status.HTTP_200_OK)
+            return Response({'results': {'data': serializer.data, 'status': 1}}, status=status.HTTP_200_OK)
 
         else:
             serializer = ObservationSerializer(page, many=True, context={'user_observation_collection': True,
                                                                          'request': request})
-            return self.get_paginated_response(serializer.data)
+            return self.get_paginated_response({'data': serializer.data})
 

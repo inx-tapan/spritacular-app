@@ -65,7 +65,9 @@ class ObservationImageMapping(BaseModel):
 
 # TODO: Need to think about this if it is needed or not.
 # class ObservationReasonForReject(BaseModel):
-#     title = models.CharField(max_length=20, unique=True)
+#     additional_comment = models.CharField(max_length=20, null=True, blank=True)
+#     inappropriate_image = models.BooleanField(default=False)
+#     other = models.BooleanField(default=False)
 #
 #     def __str__(self):
 #         return f"{self.title}"
