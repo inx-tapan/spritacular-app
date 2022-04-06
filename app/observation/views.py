@@ -10,7 +10,8 @@ from rest_framework.views import APIView
 from .serializers import (ImageMetadataSerializer, ObservationSerializer, ObservationCommentSerializer)
 from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
-from .models import Observation, Category, ObservationComment, ObservationLike, ObservationWatchCount
+from users.permissions import IsAdminOrTrained
+from .models import Observation, Category, ObservationComment, ObservationLike, ObservationWatchCount, VerifyObservation
 from constants import NOT_FOUND, OBS_FORM_SUCCESS
 from rest_framework.pagination import PageNumberPagination
 
@@ -287,3 +288,37 @@ class ObservationGalleryViewSet(ListAPIView):
             serializer = ObservationSerializer(page, many=True, context={'user_observation_collection': True,
                                                                          'request': request})
             return self.get_paginated_response({'data': serializer.data})
+
+
+class ObservationVoteViewSet(APIView):
+    """
+    Observation vote api.
+    Allowed for admin and trained users.
+    """
+    permission_classes = (IsAuthenticated, IsAdminOrTrained)
+
+    def post(self, request, *args, **kwargs):
+        observation_id = kwargs.get('pk')
+        user = request.user
+        data = request.data
+        observation_obj = Observation.objects.get(id=observation_id)
+        is_status_change = False
+        for i in data.get('votes'):
+            verify_obs_obj = VerifyObservation.objects.create(observation_id=observation_id, user=user,
+                                                              category_id=i.category_id, vote=i.vote)
+
+            if verify_obs_obj.user.is_superuser and verify_obs_obj.vote:
+                # If an admin votes yes on any category of the observation it will send for verification.
+                is_status_change = True
+
+            if VerifyObservation.objects.filter(observation_id=observation_id,
+                                                category_id=i.category_id, vote=True).count() > 3:
+                # If any category of the observation have more than 3 yes votes it will send for verification.
+                is_status_change = True
+
+        if is_status_change:
+            # Set is_to_be_verify flag to True.
+            observation_obj.is_to_be_verify = True
+            observation_obj.save(update_fields=['is_to_be_verify'])
+
+        return Response({'success': 'Successfully Voted.', 'status': 1}, status=status.HTTP_200_OK)

@@ -6,12 +6,14 @@ class IsOwnerOrAdmin(permissions.BasePermission):
     my_safe_methods = ['GET', 'PUT', 'PATCH', 'POST']
 
     def has_permission(self, request, view):
-        if request.method in self.my_safe_methods:
-            return True
-        return False
+        return request.method in self.my_safe_methods
 
     def has_object_permission(self, request, view, obj):
-        if request.user.is_superuser:
-            return obj
-        else:
-            return obj == request.user
+        return obj if request.user.is_superuser else obj == request.user
+
+
+class IsAdminOrTrained(permissions.BasePermission):
+    message = "You must be a trained or a admin user."
+
+    def has_permission(self, request, view):
+        return bool(request.user.is_superuser or request.user.is_trained)
