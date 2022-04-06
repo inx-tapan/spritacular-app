@@ -63,17 +63,17 @@ class ObservationImageMapping(BaseModel):
         return True
 
 
-# TODO: Need to think about this if it is needed or not.
-# class ObservationReasonForReject(BaseModel):
-#     additional_comment = models.CharField(max_length=20, null=True, blank=True)
-#     inappropriate_image = models.BooleanField(default=False)
-#     other = models.BooleanField(default=False)
-#
-#     def __str__(self):
-#         return f"{self.title}"
-#
-#     class Meta:
-#         db_table = 'observation_reason_for_reject'
+class ObservationReasonForReject(BaseModel):
+    observation = models.ForeignKey(Observation, on_delete=models.CASCADE)
+    additional_comment = models.CharField(max_length=200, null=True, blank=True)
+    inappropriate_image = models.BooleanField(default=False)
+    other = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.id} | Observation id - {self.observation.id}"
+
+    class Meta:
+        db_table = 'observation_reason_for_reject'
 
 
 class Category(BaseModel):

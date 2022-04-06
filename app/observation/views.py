@@ -3,7 +3,7 @@ import json
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework.generics import ListAPIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -11,7 +11,8 @@ from .serializers import (ImageMetadataSerializer, ObservationSerializer, Observ
 from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
 from users.permissions import IsAdminOrTrained
-from .models import Observation, Category, ObservationComment, ObservationLike, ObservationWatchCount, VerifyObservation
+from .models import (Observation, Category, ObservationComment, ObservationLike, ObservationWatchCount,
+                     VerifyObservation, ObservationReasonForReject)
 from constants import NOT_FOUND, OBS_FORM_SUCCESS
 from rest_framework.pagination import PageNumberPagination
 
@@ -322,3 +323,42 @@ class ObservationVoteViewSet(APIView):
             observation_obj.save(update_fields=['is_to_be_verify'])
 
         return Response({'success': 'Successfully Voted.', 'status': 1}, status=status.HTTP_200_OK)
+
+
+class ObservationVerifyViewSet(APIView):
+    """
+    observation approve and reject api.
+    Allowed to admin users only.
+    """
+    permission_classes = (IsAuthenticated, IsAdminUser)
+
+    def post(self, request, *args, **kwargs):
+        observation_id = kwargs.get('pk')
+        data = request.data
+        observation_obj = Observation.objects.get(id=observation_id)
+
+        if data.get('status') == 1:
+            # Approved
+            observation_obj.is_verified = True
+            observation_obj.is_reject = False
+            observation_obj.save(update_fields=['is_verified', 'is_reject'])
+
+            return Response({'success': 'Observation Approved.'}, status=status.HTTP_200_OK)
+
+        elif data.get('status') == 0:
+            # Reject
+            observation_obj.is_reject = True
+            observation_obj.is_verified = False
+            observation_obj.save(update_fields=['is_reject', 'is_verified'])
+
+            if data.get('reason'):
+                # Reason for reject
+                ObservationReasonForReject.objects.create(observation_id=observation_id,
+                                                          inappropriate_image=data.get('inappropriate_image'),
+                                                          other=data.get('other'),
+                                                          additional_comment=data.get('additional_comment', None))
+
+            return Response({'success': 'Observation Rejected.'}, status=status.HTTP_200_OK)
+
+        return Response({'details': 'Something went wrong.'}, status=status.HTTP_400_BAD_REQUEST)
+
