@@ -251,11 +251,15 @@ class ObservationWatchCountViewSet(APIView):
 
 
 class ObservationGalleryViewSet(ListAPIView):
+    """
+    Observation gallery page api with paginated response.
+    """
     pagination_class = PageNumberPagination
 
     def get(self, request, *args, **kwargs):
         data = request.query_params
 
+        # Storing gallery filters
         filters = Q()
         if data.get('country'):
             filters = filters & Q(observationimagemapping__country_code__iexact=data.get('country'))
@@ -266,8 +270,12 @@ class ObservationGalleryViewSet(ListAPIView):
         if data.get('status') == 'unverified':
             filters = filters & Q(is_submit=True, is_verified=False)
 
-        observation_filter = Observation.objects.filter(filters).order_by('-pk') if request.user.is_authenticated else\
-            Observation.objects.filter(is_submit=True, is_verified=True).order_by('-pk')
+        if request.user.is_authenticated and request.user.is_trained:
+            # Trained user can see both verified and unverified observation on gallery screen.
+            observation_filter = Observation.objects.filter(filters).order_by('-pk')
+        else:
+            # Unauthenticated and untrained user can see only verified observations.
+            observation_filter = Observation.objects.filter(is_submit=True, is_verified=True).order_by('-pk')
 
         page = self.paginate_queryset(observation_filter)
         if not page:
