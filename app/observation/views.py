@@ -13,7 +13,7 @@ from users.serializers import CameraSettingSerializer
 from users.permissions import IsAdminOrTrained
 from .models import (Observation, Category, ObservationComment, ObservationLike, ObservationWatchCount,
                      VerifyObservation, ObservationReasonForReject)
-from constants import NOT_FOUND, OBS_FORM_SUCCESS
+from constants import NOT_FOUND, OBS_FORM_SUCCESS, SOMETHING_WENT_WRONG
 from rest_framework.pagination import PageNumberPagination
 
 
@@ -302,7 +302,11 @@ class ObservationVoteViewSet(APIView):
         observation_id = kwargs.get('pk')
         user = request.user
         data = request.data
-        observation_obj = Observation.objects.get(id=observation_id)
+        try:
+            observation_obj = Observation.objects.get(id=observation_id)
+        except Observation.DoesNotExist:
+            return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
+
         is_status_change = False
         for i in data.get('votes'):
             verify_obs_obj = VerifyObservation.objects.create(observation_id=observation_id, user=user,
@@ -335,7 +339,10 @@ class ObservationVerifyViewSet(APIView):
     def post(self, request, *args, **kwargs):
         observation_id = kwargs.get('pk')
         data = request.data
-        observation_obj = Observation.objects.get(id=observation_id)
+        try:
+            observation_obj = Observation.objects.get(id=observation_id)
+        except Observation.DoesNotExist:
+            return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
 
         if data.get('status') == 1:
             # Approved
@@ -360,5 +367,5 @@ class ObservationVerifyViewSet(APIView):
 
             return Response({'success': 'Observation Rejected.'}, status=status.HTTP_200_OK)
 
-        return Response({'details': 'Something went wrong.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
 
