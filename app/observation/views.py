@@ -270,7 +270,7 @@ class ObservationGalleryViewSet(ListAPIView):
         if data.get('status') == 'unverified':
             filters = filters & Q(is_submit=True, is_verified=False)
 
-        if request.user.is_authenticated and request.user.is_trained:
+        if request.user.is_authenticated and (request.user.is_trained or request.user.is_superuser):
             # Trained user can see both verified and unverified observation on gallery screen.
             observation_filter = Observation.objects.filter(filters).order_by('-pk')
         else:
