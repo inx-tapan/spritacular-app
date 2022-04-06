@@ -93,6 +93,9 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
             camera = None
 
         serializer['camera'] = camera
+        serializer['is_superuser'] = request.user.is_superuser
+        serializer['is_trained'] = request.user.is_trained
+        serializer['is_user'] = not request.user.is_superuser and not request.user.is_trained
         return Response(serializer, status=status.HTTP_200_OK)
 
 

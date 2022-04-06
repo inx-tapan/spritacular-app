@@ -72,7 +72,10 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             'is_first_login': self.user.is_first_login,
             'profile_image': self.user.profile_image.url if self.user.profile_image else None,
             'location_metadata': self.user.location_metadata,
-            'camera': camera
+            'camera': camera,
+            'is_superuser': self.user.is_superuser,
+            'is_trained': self.user.is_trained,
+            'is_user': not self.user.is_superuser and not self.user.is_trained
         }
 
         if self.user.is_first_login:
