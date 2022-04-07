@@ -334,7 +334,7 @@ class ObservationVerifyViewSet(APIView):
     observation approve and reject api.
     Allowed to admin users only.
     """
-    permission_classes = (IsAuthenticated, IsAdminUser)
+    permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
         observation_id = kwargs.get('pk')
@@ -370,3 +370,9 @@ class ObservationVerifyViewSet(APIView):
 
         return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
 
+
+class ObservationDashboardViewSet(APIView):
+    permission_classes = (IsAuthenticated, IsAdminUser)
+
+    def post(self, request, *args, **kwargs):
+        pass
