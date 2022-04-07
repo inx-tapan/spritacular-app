@@ -344,7 +344,7 @@ class ObservationVerifyViewSet(APIView):
         except Observation.DoesNotExist:
             return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
 
-        if data.get('status') == 1:
+        if data.get('name') == "APPROVE":
             # Approved
             observation_obj.is_verified = True
             observation_obj.is_reject = False
@@ -352,18 +352,19 @@ class ObservationVerifyViewSet(APIView):
 
             return Response({'success': 'Observation Approved.'}, status=status.HTTP_200_OK)
 
-        elif data.get('status') == 0:
+        elif data.get('name') == "REJECT":
             # Reject
             observation_obj.is_reject = True
             observation_obj.is_verified = False
             observation_obj.save(update_fields=['is_reject', 'is_verified'])
 
             if data.get('reason'):
+                reason_data = data.get('reason')
                 # Reason for reject
                 ObservationReasonForReject.objects.create(observation_id=observation_id,
-                                                          inappropriate_image=data.get('inappropriate_image'),
-                                                          other=data.get('other'),
-                                                          additional_comment=data.get('additional_comment', None))
+                                                          inappropriate_image=reason_data.get('inappropriate_image'),
+                                                          other=reason_data.get('other'),
+                                                          additional_comment=reason_data.get('additional_comment', None))
 
             return Response({'success': 'Observation Rejected.'}, status=status.HTTP_200_OK)
 
