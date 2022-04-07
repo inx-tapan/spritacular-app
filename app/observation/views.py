@@ -29,7 +29,6 @@ class ImageMetadataViewSet(APIView):
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
-    permission_classes = (IsAuthenticated,)
     queryset = Category.objects.all()
 
     def list(self, request, *args, **kwargs):

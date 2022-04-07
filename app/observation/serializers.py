@@ -128,7 +128,7 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     def get_category_name(self, data):
         obj = ObservationCategoryMapping.objects.filter(observation=data)
-        return [i.category.title for i in obj]
+        return [{"name": i.category.title, "id": i.category.id} for i in obj]
 
     def get_camera(self, data):
         return CameraSettingSerializer(data.camera).data
