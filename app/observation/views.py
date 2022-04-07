@@ -3,14 +3,14 @@ import json
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework.generics import ListAPIView
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .serializers import (ImageMetadataSerializer, ObservationSerializer, ObservationCommentSerializer)
 from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
-from users.permissions import IsAdminOrTrained
+from users.permissions import IsAdminOrTrained, IsAdmin
 from .models import (Observation, Category, ObservationComment, ObservationLike, ObservationWatchCount,
                      VerifyObservation, ObservationReasonForReject)
 from constants import NOT_FOUND, OBS_FORM_SUCCESS, SOMETHING_WENT_WRONG
@@ -310,14 +310,14 @@ class ObservationVoteViewSet(APIView):
         is_status_change = False
         for i in data.get('votes'):
             verify_obs_obj = VerifyObservation.objects.create(observation_id=observation_id, user=user,
-                                                              category_id=i.category_id, vote=i.vote)
+                                                              category_id=i.get("category_id"), vote=i.get("vote"))
 
             if verify_obs_obj.user.is_superuser and verify_obs_obj.vote:
                 # If an admin votes yes on any category of the observation it will send for verification.
                 is_status_change = True
 
             if VerifyObservation.objects.filter(observation_id=observation_id,
-                                                category_id=i.category_id, vote=True).count() > 3:
+                                                category_id=i.get("category_id"), vote=True).count() > 3:
                 # If any category of the observation have more than 3 yes votes it will send for verification.
                 is_status_change = True
 
@@ -334,7 +334,7 @@ class ObservationVerifyViewSet(APIView):
     observation approve and reject api.
     Allowed to admin users only.
     """
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsAdmin)
 
     def post(self, request, *args, **kwargs):
         observation_id = kwargs.get('pk')
@@ -371,8 +371,46 @@ class ObservationVerifyViewSet(APIView):
         return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ObservationDashboardViewSet(APIView):
-    permission_classes = (IsAuthenticated, IsAdminUser)
+class ObservationDashboardViewSet(ListAPIView):
+    permission_classes = (IsAuthenticated, IsAdmin)
+    pagination_class = PageNumberPagination
 
     def post(self, request, *args, **kwargs):
-        pass
+        data = request.query_params
+
+        filters = Q(is_submit=True, is_to_be_verify=True)
+        if data.get('country'):
+            filters = filters & Q(observationimagemapping__country_code__iexact=data.get('country'))
+        if data.get('category'):
+            filters = filters & Q(observationcategorymapping__category__title__iexact=data.get('category'))
+        if data.get('status') == 'verified':
+            filters = filters & Q(is_verified=True)
+        if data.get('status') == 'unverified':
+            filters = filters & Q(is_verified=False)
+        if data.get('from_obs_data'):
+            filters = filters & Q(observationimagemapping__obs_date__gte=data.get('from_obs_data'))
+        if data.get('to_obs_data'):
+            filters = filters & Q(observationimagemapping__obs_date__lte=data.get('to_obs_data'))
+        if data.get('camera_type'):
+            filters = filters & Q(camera__camera_type__iexact=data.get('camera_type'))
+        if data.get('fps'):
+            filters = filters & Q(camera__fps__iexact=data.get('fps'))
+        if data.get('fov'):
+            filters = filters & Q()
+        if data.get('shutter_speed'):
+            filters = filters & Q(camera__shutter_speed__iexact=data.get('shutter_speed'))
+
+        observation_filter = Observation.objects.filter(filters).order_by('-pk')
+
+        page = self.paginate_queryset(observation_filter)
+        if not page:
+            serializer = ObservationSerializer(observation_filter, many=True,
+                                               context={'user_observation_collection': True, 'request': request})
+            return Response({'results': {'data': serializer.data, 'status': 1}}, status=status.HTTP_200_OK)
+
+        else:
+            serializer = ObservationSerializer(page, many=True, context={'user_observation_collection': True,
+                                                                         'request': request})
+            return self.get_paginated_response({'data': serializer.data})
+
+
