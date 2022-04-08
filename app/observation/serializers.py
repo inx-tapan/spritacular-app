@@ -1,14 +1,18 @@
+import uuid
+
+from django.core.files.storage import FileSystemStorage
 from django.core.validators import FileExtensionValidator
 from rest_framework import serializers
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
 from .utils import dms_coordinates_to_dd_coordinates
 from .models import (ObservationImageMapping, Observation, Category, ObservationCategoryMapping, ObservationComment,
-                     ObservationLike, ObservationWatchCount)
+                     ObservationLike, ObservationWatchCount, VerifyObservation)
 from users.models import CameraSetting
 from users.serializers import UserRegisterSerializer, CameraSettingSerializer
 from constants import FIELD_REQUIRED, SINGLE_IMAGE_VALID, MULTIPLE_IMAGE_VALID
 # from observation.tasks import observation_image_compression
+from spritacular.utils import compress_image
 
 
 class ImageMetadataSerializer(serializers.Serializer):
@@ -75,7 +79,7 @@ class ObservationCategorySerializer(serializers.ModelSerializer):
 
 
 class ObservationImageSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'png', 'jpeg'])], allow_null=True)
+    image = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'png', 'jpeg'])], required=True)
     category_map = ObservationCategorySerializer(required=False)
     # latitude = serializers.DecimalField(coerce_to_string=False, max_digits=22, decimal_places=16, allow_null=True)
     # longitude = serializers.DecimalField(coerce_to_string=False, max_digits=22, decimal_places=16, allow_null=True)
@@ -103,11 +107,11 @@ class ObservationSerializer(serializers.ModelSerializer):
                   'user_data', 'is_verified', 'category_data', 'camera_data', 'like_watch_count_data', 'is_submit',
                   'is_reject')
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if 'user_observation_collection' in self.context:
-            del self.fields['map_data']
-            del self.fields['camera']
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     if 'user_observation_collection' in self.context:
+    #         del self.fields['map_data']
+    #         del self.fields['camera']
 
     def get_image(self, data):
         obj = ObservationImageMapping.objects.filter(observation=data)
@@ -120,7 +124,11 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     def get_user(self, data):
         user = data.user
-        return UserRegisterSerializer(user).data
+        serializer = UserRegisterSerializer(user).data
+        serializer['is_voted'] = VerifyObservation.objects.filter(observation=data,
+                                                                  user=self.context.get('request').user).exists()
+        serializer['is_can_vote'] = data.user != self.context.get('request').user
+        return serializer
 
     def get_category(self, data):
         obj = ObservationCategoryMapping.objects.filter(observation=data)
@@ -215,6 +223,22 @@ class ObservationSerializer(serializers.ModelSerializer):
                     if not ObservationCategoryMapping.objects.filter(observation_id=observation.id,
                                                                      category=tle).exists():
                         ObservationCategoryMapping.objects.create(observation_id=observation.id, category=tle)
+
+            # # Image Compression
+            # image_file = image_data[i].pop('image')
+            # newfile_name = f"{uuid.uuid4()}.{image_file.name.split('.')[-1]}"  # creating unique file name
+            #
+            # # First saving original file locally.
+            # fs = FileSystemStorage()
+            # file_name = fs.save(newfile_name, image_file)
+            # image_file_name = fs.url(file_name)
+            #
+            # compressed_image = compress_image(image_file, newfile_name)  # Compression function call
+
+            # obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i],
+            #                                                            compressed_image=compressed_image,
+            #                                                            observation_id=observation.id,
+            #                                                            image_name=image_file_name)
 
             obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
             obs_image_map_obj.set_utc()
