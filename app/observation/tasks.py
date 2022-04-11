@@ -1,12 +1,10 @@
-# import sys
-#
-# # from celery import shared_task
-# from io import BytesIO
-# from PIL import Image
-# from django.core.files.uploadedfile import InMemoryUploadedFile
-# from observation.models import ObservationImageMapping
-#
-#
+import os
+
+from celery import shared_task
+from django.core.files import File
+from observation.models import ObservationImageMapping
+
+
 # @shared_task(name='observation_image_compression')
 # def observation_image_compression(obs_image_map_id):
 #     obs_image_map_obj = ObservationImageMapping.objects.get(pk=obs_image_map_id)
@@ -44,3 +42,21 @@
 #
 #     obs_image_map_obj.compressed_image = image_file
 #     obs_image_map_obj.save()
+
+from django.conf import settings
+
+
+@shared_task(name="get_original_image")
+def get_original_image(obs_id):
+    obs_image_map_obj = ObservationImageMapping.objects.get(id=obs_id)
+
+    try:
+        file_name = obs_image_map_obj.image_name.split('/')[-1]
+        image_open_file = open(f"{file_name.split('/')[-1]}", 'rb')  # opening file from local storage
+        image_file_obj = File(image_open_file)  # creating django storage file object
+        obs_image_map_obj.image = image_file_obj
+        obs_image_map_obj.save(update_fields=["image"])
+        os.remove(f"{file_name.split('/')[-1]}")
+
+    except Exception as e:
+        print(f"Something went wrong : {e}")

@@ -11,8 +11,8 @@ from .models import (ObservationImageMapping, Observation, Category, Observation
 from users.models import CameraSetting
 from users.serializers import UserRegisterSerializer, CameraSettingSerializer
 from constants import FIELD_REQUIRED, SINGLE_IMAGE_VALID, MULTIPLE_IMAGE_VALID
-# from observation.tasks import observation_image_compression
-from spritacular.utils import compress_image
+# from observation.tasks import get_original_image
+# from spritacular.utils import compress_image
 
 
 class ImageMetadataSerializer(serializers.Serializer):
@@ -125,9 +125,12 @@ class ObservationSerializer(serializers.ModelSerializer):
     def get_user(self, data):
         user = data.user
         serializer = UserRegisterSerializer(user).data
-        serializer['is_voted'] = VerifyObservation.objects.filter(observation=data,
-                                                                  user=self.context.get('request').user).exists()
-        serializer['is_can_vote'] = data.user != self.context.get('request').user
+        serializer['is_voted'] = False
+        serializer['is_can_vote'] = False
+        if self.context.get('request').user.is_authenticated:
+            serializer['is_voted'] = VerifyObservation.objects.filter(observation=data,
+                                                                      user=self.context.get('request').user).exists()
+            serializer['is_can_vote'] = data.user != self.context.get('request').user
         return serializer
 
     def get_category(self, data):
@@ -229,12 +232,12 @@ class ObservationSerializer(serializers.ModelSerializer):
             # newfile_name = f"{uuid.uuid4()}.{image_file.name.split('.')[-1]}"  # creating unique file name
             #
             # # First saving original file locally.
-            # fs = FileSystemStorage()
+            # fs = FileSystemStorage(location="")
             # file_name = fs.save(newfile_name, image_file)
             # image_file_name = fs.url(file_name)
             #
             # compressed_image = compress_image(image_file, newfile_name)  # Compression function call
-
+            #
             # obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i],
             #                                                            compressed_image=compressed_image,
             #                                                            observation_id=observation.id,
@@ -242,7 +245,7 @@ class ObservationSerializer(serializers.ModelSerializer):
 
             obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
             obs_image_map_obj.set_utc()
-            # observation_image_compression.delay(obs_image_map_obj.id)
+            # get_original_image.delay(obs_image_map_obj.id)
 
         return observation
 
