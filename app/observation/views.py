@@ -321,6 +321,7 @@ class ObservationVoteViewSet(APIView):
                 is_status_change = True
 
         if is_status_change:
+            print("status change")
             # Set is_to_be_verify flag to True.
             observation_obj.is_to_be_verify = True
             observation_obj.save(update_fields=['is_to_be_verify'])
