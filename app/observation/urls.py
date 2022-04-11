@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (ImageMetadataViewSet, UploadObservationViewSet, CategoryViewSet, ObservationCommentViewSet,
                     ObservationLikeViewSet, ObservationWatchCountViewSet, ObservationGalleryViewSet,
-                    ObservationVoteViewSet, ObservationVerifyViewSet)
+                    ObservationVoteViewSet, ObservationVerifyViewSet, ObservationDashboardViewSet)
 
 urlpatterns = [
     # EXIF data from image.
@@ -22,7 +22,10 @@ urlpatterns = [
     path('like/<int:pk>/', ObservationLikeViewSet.as_view(), name="observation_like"),
     # Observation Watch Count
     path('watch_count/<int:pk>/', ObservationWatchCountViewSet.as_view(), name="observation_watch_count"),
+    # Observation Gallery
     path('gallery/', ObservationGalleryViewSet.as_view(), name="gallery"),
+    # Observation Dashboard
+    path('dashboard/', ObservationDashboardViewSet.as_view(), name="dashboard"),
     # Observation Vote
     path('vote/<int:pk>/', ObservationVoteViewSet.as_view(), name="observation_vote"),
     # Approve or Reject Observation

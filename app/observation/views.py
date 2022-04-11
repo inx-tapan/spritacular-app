@@ -372,9 +372,10 @@ class ObservationVerifyViewSet(APIView):
 
 class ObservationDashboardViewSet(ListAPIView):
     permission_classes = (IsAuthenticated, IsAdmin)
+    serializer_class = ObservationSerializer
     pagination_class = PageNumberPagination
 
-    def post(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         data = request.query_params
 
         filters = Q(is_submit=True, is_to_be_verify=True)
@@ -403,12 +404,12 @@ class ObservationDashboardViewSet(ListAPIView):
 
         page = self.paginate_queryset(observation_filter)
         if not page:
-            serializer = ObservationSerializer(observation_filter, many=True,
+            serializer = self.serializer_class(observation_filter, many=True,
                                                context={'user_observation_collection': True, 'request': request})
             return Response({'results': {'data': serializer.data, 'status': 1}}, status=status.HTTP_200_OK)
 
         else:
-            serializer = ObservationSerializer(page, many=True, context={'user_observation_collection': True,
+            serializer = self.serializer_class(page, many=True, context={'user_observation_collection': True,
                                                                          'request': request})
             return self.get_paginated_response({'data': serializer.data})
 
