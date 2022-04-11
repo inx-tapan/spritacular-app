@@ -261,15 +261,15 @@ class ObservationGalleryViewSet(ListAPIView):
         data = request.query_params
 
         # Storing gallery filters
-        filters = Q(is_reject=False)
+        filters = Q(is_submit=True, is_reject=False)
         if data.get('country'):
             filters = filters & Q(observationimagemapping__country_code__iexact=data.get('country'))
         if data.get('category'):
             filters = filters & Q(observationcategorymapping__category__title__iexact=data.get('category'))
         if data.get('status') == 'verified':
-            filters = filters & Q(is_submit=True, is_verified=True)
+            filters = filters & Q(is_verified=True)
         if data.get('status') == 'unverified':
-            filters = filters & Q(is_submit=True, is_verified=False)
+            filters = filters & Q(is_verified=False)
 
         if request.user.is_authenticated and (request.user.is_trained or request.user.is_superuser):
             # Trained user can see both verified and unverified observation on gallery screen.
