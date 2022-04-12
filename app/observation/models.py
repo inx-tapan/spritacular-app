@@ -25,7 +25,7 @@ class Observation(BaseModel):
     reject_message = models.TextField(null=True, blank=True)
     elevation_angle = models.DecimalField(max_digits=22, decimal_places=16, null=True, blank=True)
     video_url = models.URLField(null=True, blank=True)
-    story = models.TextField(default='')
+    story = models.TextField(default='', blank=True)
 
     def __str__(self):
         return f"Observation by {self.user.email}"
@@ -33,8 +33,9 @@ class Observation(BaseModel):
 
 class ObservationImageMapping(BaseModel):
     observation = models.ForeignKey(Observation, on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='observation_image')
+    image = models.ImageField(upload_to='observation_image', null=True, blank=True)
     compressed_image = models.ImageField(upload_to='compressed_observation_image', null=True, blank=True)
+    image_name = models.CharField(max_length=100, null=True, blank=True)
     location = models.CharField(max_length=256, null=True, blank=True)
     place_uid = models.CharField(max_length=256, null=True, blank=True)
     country_code = models.CharField(max_length=10, null=True, blank=True)
@@ -63,15 +64,17 @@ class ObservationImageMapping(BaseModel):
         return True
 
 
-# TODO: Need to think about this if it is needed or not.
-# class ObservationReasonForReject(BaseModel):
-#     title = models.CharField(max_length=20, unique=True)
-#
-#     def __str__(self):
-#         return f"{self.title}"
-#
-#     class Meta:
-#         db_table = 'observation_reason_for_reject'
+class ObservationReasonForReject(BaseModel):
+    observation = models.ForeignKey(Observation, on_delete=models.CASCADE)
+    additional_comment = models.CharField(max_length=200, null=True, blank=True)
+    inappropriate_image = models.BooleanField(default=False)
+    other = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.id} | Observation id - {self.observation.id}"
+
+    class Meta:
+        db_table = 'observation_reason_for_reject'
 
 
 class Category(BaseModel):
