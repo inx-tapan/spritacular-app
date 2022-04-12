@@ -25,7 +25,7 @@ class Observation(BaseModel):
     reject_message = models.TextField(null=True, blank=True)
     elevation_angle = models.DecimalField(max_digits=22, decimal_places=16, null=True, blank=True)
     video_url = models.URLField(null=True, blank=True)
-    story = models.TextField(default='')
+    story = models.TextField(default='', blank=True)
 
     def __str__(self):
         return f"Observation by {self.user.email}"
