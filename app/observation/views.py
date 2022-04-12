@@ -155,7 +155,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         except Observation.DoesNotExist:
             return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = self.serializer_class(obs_obj, context={'user_observation_collection': True})
+        serializer = self.serializer_class(obs_obj, context={'user_observation_collection': True, 'request': request})
 
         return Response({'data': serializer.data, 'status': 1}, status=status.HTTP_200_OK)
 
