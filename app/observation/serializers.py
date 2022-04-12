@@ -1,13 +1,18 @@
+import uuid
+
+from django.core.files.storage import FileSystemStorage
 from django.core.validators import FileExtensionValidator
 from rest_framework import serializers
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
 from .utils import dms_coordinates_to_dd_coordinates
-from .models import ObservationImageMapping, Observation, Category, ObservationCategoryMapping, ObservationComment
+from .models import (ObservationImageMapping, Observation, Category, ObservationCategoryMapping, ObservationComment,
+                     ObservationLike, ObservationWatchCount, VerifyObservation)
 from users.models import CameraSetting
 from users.serializers import UserRegisterSerializer, CameraSettingSerializer
 from constants import FIELD_REQUIRED, SINGLE_IMAGE_VALID, MULTIPLE_IMAGE_VALID
-# from observation.tasks import observation_image_compression
+# from observation.tasks import get_original_image
+# from spritacular.utils import compress_image
 
 
 class ImageMetadataSerializer(serializers.Serializer):
@@ -74,7 +79,7 @@ class ObservationCategorySerializer(serializers.ModelSerializer):
 
 
 class ObservationImageSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'png', 'jpeg'])], allow_null=True)
+    image = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'png', 'jpeg'])], required=True)
     category_map = ObservationCategorySerializer(required=False)
     # latitude = serializers.DecimalField(coerce_to_string=False, max_digits=22, decimal_places=16, allow_null=True)
     # longitude = serializers.DecimalField(coerce_to_string=False, max_digits=22, decimal_places=16, allow_null=True)
@@ -88,23 +93,25 @@ class ObservationImageSerializer(serializers.ModelSerializer):
 
 class ObservationSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    map_data = ObservationImageSerializer(many=True)
+    map_data = ObservationImageSerializer(many=True, write_only=True)
     camera = serializers.PrimaryKeyRelatedField(queryset=CameraSetting.objects.all(), allow_null=True, required=False)
     images = serializers.SerializerMethodField('get_image', read_only=True)
     user_data = serializers.SerializerMethodField('get_user', read_only=True)
     category_data = serializers.SerializerMethodField('get_category_name', read_only=True)
     camera_data = serializers.SerializerMethodField('get_camera', read_only=True)
+    like_watch_count_data = serializers.SerializerMethodField('get_like_watch_count_data', read_only=True)
 
     class Meta:
         model = Observation
         fields = ('id', 'user', 'image_type', 'camera', 'map_data', 'elevation_angle', 'video_url', 'story', 'images',
-                  'user_data', 'is_verified', 'category_data', 'camera_data', 'is_submit', 'is_reject')
+                  'user_data', 'is_verified', 'category_data', 'camera_data', 'like_watch_count_data', 'is_submit',
+                  'is_reject')
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if 'user_observation_collection' in self.context:
-            del self.fields['map_data']
-            del self.fields['camera']
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     if 'user_observation_collection' in self.context:
+    #         del self.fields['map_data']
+    #         del self.fields['camera']
 
     def get_image(self, data):
         obj = ObservationImageMapping.objects.filter(observation=data)
@@ -117,7 +124,14 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     def get_user(self, data):
         user = data.user
-        return UserRegisterSerializer(user).data
+        serializer = UserRegisterSerializer(user).data
+        serializer['is_voted'] = False
+        serializer['is_can_vote'] = False
+        if self.context.get('request').user.is_authenticated:
+            serializer['is_voted'] = VerifyObservation.objects.filter(observation=data,
+                                                                      user=self.context.get('request').user).exists()
+            serializer['is_can_vote'] = data.user != self.context.get('request').user
+        return serializer
 
     def get_category(self, data):
         obj = ObservationCategoryMapping.objects.filter(observation=data)
@@ -125,10 +139,22 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     def get_category_name(self, data):
         obj = ObservationCategoryMapping.objects.filter(observation=data)
-        return [i.category.title for i in obj]
+        return [{"name": i.category.title, "id": i.category.id} for i in obj]
 
     def get_camera(self, data):
         return CameraSettingSerializer(data.camera).data
+
+    def get_like_watch_count_data(self, data):
+        like_count = ObservationLike.objects.filter(observation=data).count()
+        is_like = None
+        is_watch = None
+        if self.context.get('request').user.is_authenticated:
+            is_like = ObservationLike.objects.filter(observation=data, user=self.context.get('request').user).exists()
+            is_watch = ObservationWatchCount.objects.filter(observation=data,
+                                                            user=self.context.get('request').user).exists()
+        watch_count = ObservationWatchCount.objects.filter(observation=data).count()
+
+        return {'like_count': like_count, 'is_like': is_like, 'watch_count': watch_count, 'is_watch': is_watch}
 
     def validate(self, data):
         image_data = data.get('map_data')
@@ -201,9 +227,25 @@ class ObservationSerializer(serializers.ModelSerializer):
                                                                      category=tle).exists():
                         ObservationCategoryMapping.objects.create(observation_id=observation.id, category=tle)
 
+            # # Image Compression
+            # image_file = image_data[i].pop('image')
+            # newfile_name = f"{uuid.uuid4()}.{image_file.name.split('.')[-1]}"  # creating unique file name
+            #
+            # # First saving original file locally.
+            # fs = FileSystemStorage(location="")
+            # file_name = fs.save(newfile_name, image_file)
+            # image_file_name = fs.url(file_name)
+            #
+            # compressed_image = compress_image(image_file, newfile_name)  # Compression function call
+            #
+            # obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i],
+            #                                                            compressed_image=compressed_image,
+            #                                                            observation_id=observation.id,
+            #                                                            image_name=image_file_name)
+
             obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
             obs_image_map_obj.set_utc()
-            # observation_image_compression.delay(obs_image_map_obj.id)
+            # get_original_image.delay(obs_image_map_obj.id)
 
         return observation
 

@@ -31,8 +31,9 @@ class User(AbstractUser):
     profile_image = models.ImageField(null=True, blank=True, upload_to='profile_image')
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True, null=True, blank=True)
-    location_metadata = models.JSONField(null=True)
+    location_metadata = models.JSONField(null=True, blank=True)
     is_first_login = models.BooleanField(default=False)
+    is_trained = models.BooleanField(default=False)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []

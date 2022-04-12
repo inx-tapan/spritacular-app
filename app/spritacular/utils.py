@@ -5,9 +5,24 @@ from PIL import Image
 from django.core.files.uploadedfile import InMemoryUploadedFile
 
 
-def compress_image(obs_image):
-    file_name = obs_image.name
+def compress_image(obs_image, file_name):
+    """
+    Image compression function
+    :param obs_image: InMemoryFileObject
+    :param file_name: image file name
+    :return: new compressed InMemoryFileObject
+    """
     im = Image.open(obs_image)
+
+    if im.width == im.height:
+        new_size = (int(im.width/2), int(im.height/2))
+    elif im.width > im.height:
+        new_size = (int(im.width/3), int(im.height/2))
+    else:
+        new_size = (int(im.width/2), int(im.height/3))
+
+    im.thumbnail(new_size)
+
     output = BytesIO()
     ext = im.format
     if im.format == 'PNG':
