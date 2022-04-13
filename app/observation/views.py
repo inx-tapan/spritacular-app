@@ -379,7 +379,7 @@ class ObservationDashboardViewSet(ListAPIView):
     def get(self, request, *args, **kwargs):
         data = request.query_params
 
-        filters = Q(is_submit=True, is_to_be_verify=True)
+        filters = Q(is_submit=True)
         if data.get('country'):
             filters = filters & Q(observationimagemapping__country_code__iexact=data.get('country'))
         if data.get('category'):

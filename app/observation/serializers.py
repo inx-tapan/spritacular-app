@@ -11,8 +11,8 @@ from .models import (ObservationImageMapping, Observation, Category, Observation
 from users.models import CameraSetting
 from users.serializers import UserRegisterSerializer, CameraSettingSerializer
 from constants import FIELD_REQUIRED, SINGLE_IMAGE_VALID, MULTIPLE_IMAGE_VALID
-# from observation.tasks import get_original_image
-# from spritacular.utils import compress_image
+from observation.tasks import get_original_image
+from spritacular.utils import compress_and_save_image_locally, compress_image
 
 
 class ImageMetadataSerializer(serializers.Serializer):
@@ -227,8 +227,8 @@ class ObservationSerializer(serializers.ModelSerializer):
                                                                      category=tle).exists():
                         ObservationCategoryMapping.objects.create(observation_id=observation.id, category=tle)
 
-            # # Image Compression
-            # image_file = image_data[i].pop('image')
+            # Image Compression
+            image_file = image_data[i].pop('image')
             # newfile_name = f"{uuid.uuid4()}.{image_file.name.split('.')[-1]}"  # creating unique file name
             #
             # # First saving original file locally.
@@ -237,15 +237,17 @@ class ObservationSerializer(serializers.ModelSerializer):
             # image_file_name = fs.url(file_name)
             #
             # compressed_image = compress_image(image_file, newfile_name)  # Compression function call
-            #
-            # obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i],
-            #                                                            compressed_image=compressed_image,
-            #                                                            observation_id=observation.id,
-            #                                                            image_name=image_file_name)
 
-            obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
+            image_file_name, compressed_image = compress_and_save_image_locally(image_file)  # Compression function call
+
+            obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i],
+                                                                       compressed_image=compressed_image,
+                                                                       observation_id=observation.id,
+                                                                       image_name=image_file_name)
+
+            # obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
             obs_image_map_obj.set_utc()
-            # get_original_image.delay(obs_image_map_obj.id)
+            get_original_image.delay(obs_image_map_obj.id)  # Calling celery task to save original image from local.
 
         return observation
 
@@ -306,7 +308,13 @@ class ObservationSerializer(serializers.ModelSerializer):
         if validated_data.get('image_type') != 3:
             map_obj = ObservationImageMapping.objects.filter(observation=instance).order_by('pk')
             for i in map_obj:
-                i.image = image_data[0].get('image')
+                # i.image = image_data[0].get('image')
+
+                # Image Compression
+                image_file = image_data[0].get('image')
+                # Compression function call
+                image_file_name, compressed_image = compress_and_save_image_locally(image_file)
+
                 i.location = image_data[0].get('location')
                 i.timezone = image_data[0].get('timezone')
                 i.longitude = image_data[0].get('longitude')
@@ -316,15 +324,27 @@ class ObservationSerializer(serializers.ModelSerializer):
                 i.obs_time = image_data[0].get('obs_time')
                 i.is_precise_azimuth = image_data[0].get('is_precise_azimuth')
                 i.time_accuracy = image_data[0].get('time_accuracy')
+                i.image_name = image_file_name
+                i.compressed_image = compressed_image
                 i.save()
                 i.set_utc()
+                get_original_image.delay(i.id)  # Calling celery task to save original image from local.
 
         else:
             ObservationImageMapping.objects.filter(observation=instance).delete()
             for i in image_data:
                 i.pop('category_map')
-                obs_image_map_obj = ObservationImageMapping.objects.create(**i, observation=instance)
+
+                # Image Compression
+                image_file = i.pop('image')
+                # Compression function call
+                image_file_name, compressed_image = compress_and_save_image_locally(image_file)
+
+                obs_image_map_obj = ObservationImageMapping.objects.create(**i, observation=instance,
+                                                                           compressed_image=compressed_image,
+                                                                           image_name=image_file_name)
                 obs_image_map_obj.set_utc()
+                get_original_image.delay(obs_image_map_obj.id)  # Calling celery task to save original image from local.
 
         # TODO: submit draft or update draft
         return instance
