@@ -101,6 +101,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
         obs_context = {'request': request, 'observation_settings': True}
         if 'is_draft' in data:
+            print("yes")
             # Adding is_draft for eliminating validations check.
             obs_context['is_draft'] = True
 
@@ -371,20 +372,21 @@ class ObservationVerifyViewSet(APIView):
         return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ObservationDashboardViewSet(ListAPIView):
+class ObservationDashboardViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, IsAdmin)
     serializer_class = ObservationSerializer
     pagination_class = PageNumberPagination
 
-    def get(self, request, *args, **kwargs):
-        data = request.query_params
+    def create(self, request, *args, **kwargs):
+        query_data = request.query_params
+        data = request.data
 
         filters = Q(is_submit=True)
-        if data.get('country'):
+        if query_data.get('country'):
             filters = filters & Q(observationimagemapping__country_code__iexact=data.get('country'))
-        if data.get('category'):
+        if query_data.get('category'):
             filters = filters & Q(observationcategorymapping__category__title__iexact=data.get('category'))
-        if data.get('status') == 'verified':
+        if query_data.get('status') == 'verified':
             filters = filters & Q(is_verified=True)
         if data.get('status') == 'unverified':
             filters = filters & Q(is_verified=False)

@@ -25,7 +25,7 @@ urlpatterns = [
     # Observation Gallery
     path('gallery/', ObservationGalleryViewSet.as_view(), name="gallery"),
     # Observation Dashboard
-    path('dashboard/', ObservationDashboardViewSet.as_view(), name="dashboard"),
+    path('dashboard/', ObservationDashboardViewSet.as_view({'post': 'create'}), name="dashboard"),
     # Observation Vote
     path('vote/<int:pk>/', ObservationVoteViewSet.as_view(), name="observation_vote"),
     # Approve or Reject Observation
