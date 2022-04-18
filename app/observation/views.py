@@ -383,9 +383,9 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
 
         filters = Q(is_submit=True)
         if query_data.get('country'):
-            filters = filters & Q(observationimagemapping__country_code__iexact=data.get('country'))
+            filters = filters & Q(observationimagemapping__country_code__iexact=query_data.get('country'))
         if query_data.get('category'):
-            filters = filters & Q(observationcategorymapping__category__title__iexact=data.get('category'))
+            filters = filters & Q(observationcategorymapping__category__title__iexact=query_data.get('category'))
         if query_data.get('status') == 'verified':
             filters = filters & Q(is_verified=True)
         if data.get('status') == 'unverified':
@@ -398,6 +398,8 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
             filters = filters & Q(camera__camera_type__iexact=data.get('camera_type'))
         if data.get('fps'):
             filters = filters & Q(camera__fps__iexact=data.get('fps'))
+        if data.get('iso'):
+            filters = filters & Q(camera__iso__iexact=data.get('iso'))
         if data.get('fov'):
             filters = filters & Q()
         if data.get('shutter_speed'):

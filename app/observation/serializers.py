@@ -88,7 +88,7 @@ class ObservationImageSerializer(serializers.ModelSerializer):
         model = ObservationImageMapping
         fields = ('id', 'image', 'location', 'place_uid', 'country_code', 'latitude', 'longitude', 'obs_date', 'obs_time',
                   'timezone', 'azimuth', 'category_map', 'obs_date_time_as_per_utc', 'time_accuracy',
-                  'is_precise_azimuth')
+                  'is_precise_azimuth', 'compressed_image', 'image_name')
 
 
 class ObservationSerializer(serializers.ModelSerializer):
