@@ -274,10 +274,11 @@ class ObservationGalleryViewSet(ListAPIView):
 
         if request.user.is_authenticated and (request.user.is_trained or request.user.is_superuser):
             # Trained user can see both verified and unverified observation on gallery screen.
-            observation_filter = Observation.objects.filter(filters).order_by('-pk')
+            observation_filter = Observation.objects.filter(filters).order_by('-pk').distinct('id')
         else:
             # Unauthenticated and untrained user can see only verified observations.
-            observation_filter = Observation.objects.filter(is_submit=True, is_verified=True).order_by('-pk')
+            observation_filter = Observation.objects.filter(is_submit=True,
+                                                            is_verified=True).order_by('-pk').distinct('id')
 
         page = self.paginate_queryset(observation_filter)
         if not page:
@@ -405,7 +406,7 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         if data.get('shutter_speed'):
             filters = filters & Q(camera__shutter_speed__iexact=data.get('shutter_speed'))
 
-        observation_filter = Observation.objects.filter(filters).order_by('-pk')
+        observation_filter = Observation.objects.filter(filters).order_by('-pk').distinct('id')
 
         page = self.paginate_queryset(observation_filter)
         if not page:
