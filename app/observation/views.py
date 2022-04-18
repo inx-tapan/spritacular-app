@@ -381,14 +381,14 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         query_data = request.query_params
         data = request.data
 
-        filters = Q(is_submit=True)
+        filters = Q(is_submit=True, observationimagemapping__image__isnull=False)
         if query_data.get('country'):
             filters = filters & Q(observationimagemapping__country_code__iexact=query_data.get('country'))
         if query_data.get('category'):
             filters = filters & Q(observationcategorymapping__category__title__iexact=query_data.get('category'))
         if query_data.get('status') == 'verified':
             filters = filters & Q(is_verified=True)
-        if data.get('status') == 'unverified':
+        if query_data.get('status') == 'unverified':
             filters = filters & Q(is_verified=False)
         if data.get('from_obs_data'):
             filters = filters & Q(observationimagemapping__obs_date__gte=data.get('from_obs_data'))
