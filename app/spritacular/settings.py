@@ -9,10 +9,15 @@ https://docs.djangoproject.com/en/4.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.0/ref/settings/
 """
+
 import os
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
+
+import firebase_admin
+from firebase_admin import credentials
+
 
 from firebase_admin import initialize_app
 
@@ -243,23 +248,22 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = '/home/kush/Downloads/lively-transit-343516-a59c429bb4fb.json'
-
-FIREBASE_APP = initialize_app()
-
 FCM_DJANGO_SETTINGS = {
-    "FCM_SERVER_KEY": "AAAAmOUjhgI:APA91bHRLJnknr8AeKtOWAS4qMnWpNytRNeRzxiZi_xKWjWmpCaINNWnupZb4EtChWWgtuVUaT_LA8LkaMWeHJV2Daxxy7dc_lzrABou3AwbB90htU4e0waQrsEeF7awajpObdn8oiKr",
-    # default: _('FCM Django')
-    "APP_VERBOSE_NAME": "[string for AppConfig's verbose_name]",
-    # true if you want to have only one active device per registered user at a time
-    # default: False
-    "ONE_DEVICE_PER_USER": False,
-    # devices to which notifications cannot be sent,
-    # are deleted upon receiving error response from FCM
-    # default: False
-    "DELETE_INACTIVE_DEVICES": True,
-    # Transform create of an existing Device (based on registration id) into
-    # an update. See the section
-    # "Update of device with duplicate registration ID" for more details.
-    "UPDATE_ON_DUPLICATE_REG_ID": True,
+        "FCM_SERVER_KEY": "AAAAmOUjhgI:APA91bHRLJnknr8AeKtOWAS4qMnWpNytRNeRzxiZi_xKWjWmpCaINNWnupZb4EtChWWgtuVUaT_LA8LkaMWeHJV2Daxxy7dc_lzrABou3AwbB90htU4e0waQrsEeF7awajpObdn8oiKr"
 }
+
+
+# plug in local settings if any
+PROJECT_APP = os.path.basename(BASE_DIR)
+f = os.path.join(PROJECT_APP, 'settings.py')
+if os.path.exists(f):
+    import sys
+    import importlib
+    module_name = f'{PROJECT_APP}.settings'
+    module = importlib.util.module_from_spec(module_name)
+    module.__file__ = f
+    sys.modules[module_name] = module
+    exec(open(f, 'rb').read())
+
+cred = credentials.Certificate(os.path.join(PROJECT_APP, '/home/tapan/Downloads/lively-transit-343516-a59c429bb4fb.json'))
+firebase_admin.initialize_app(cred)
