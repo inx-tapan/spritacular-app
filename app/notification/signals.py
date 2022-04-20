@@ -13,7 +13,7 @@ from observation.models import ObservationComment, VerifyObservation
 def create_notification(sender, instance, created, **kwargs):
     title = "New comments"
     data = f"{instance.text}"
-    user = instance.observation.user.first_name
+    user = instance.observation.user
     sent_at = datetime.datetime.now()
     notification = Notification.objects.create(title=title, message=data)
     result = send_notification_user(title, data, notification, sent_at, user)
