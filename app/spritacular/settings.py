@@ -14,9 +14,10 @@ from pathlib import Path
 from decouple import config
 from datetime import timedelta
 
+from firebase_admin import initialize_app
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
@@ -29,7 +30,6 @@ DEBUG = True if config('DEBUG', False) == 'True' else False
 
 ALLOWED_HOSTS = ["*"]
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'users.apps.UsersConfig',
     'observation.apps.ObservationConfig',
+    'notification.apps.NotificationConfig',
     'storages',
 
     # rest_framework
@@ -49,6 +50,9 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'django_rest_passwordreset',
     'rest_framework_simplejwt.token_blacklist',
+
+    # Firebase Cloud Messaging
+    'fcm_django',
 ]
 
 AUTH_USER_MODEL = 'users.User'
@@ -106,7 +110,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'spritacular.wsgi.application'
-
 
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
@@ -183,7 +186,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
@@ -239,3 +241,25 @@ CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND')
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+
+
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = '/home/kush/Downloads/lively-transit-343516-a59c429bb4fb.json'
+
+FIREBASE_APP = initialize_app()
+
+FCM_DJANGO_SETTINGS = {
+    "FCM_SERVER_KEY": "AAAAmOUjhgI:APA91bHRLJnknr8AeKtOWAS4qMnWpNytRNeRzxiZi_xKWjWmpCaINNWnupZb4EtChWWgtuVUaT_LA8LkaMWeHJV2Daxxy7dc_lzrABou3AwbB90htU4e0waQrsEeF7awajpObdn8oiKr",
+    # default: _('FCM Django')
+    "APP_VERBOSE_NAME": "[string for AppConfig's verbose_name]",
+    # true if you want to have only one active device per registered user at a time
+    # default: False
+    "ONE_DEVICE_PER_USER": False,
+    # devices to which notifications cannot be sent,
+    # are deleted upon receiving error response from FCM
+    # default: False
+    "DELETE_INACTIVE_DEVICES": True,
+    # Transform create of an existing Device (based on registration id) into
+    # an update. See the section
+    # "Update of device with duplicate registration ID" for more details.
+    "UPDATE_ON_DUPLICATE_REG_ID": True,
+}
