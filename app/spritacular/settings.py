@@ -249,7 +249,7 @@ CELERY_RESULT_SERIALIZER = 'json'
 
 
 FCM_DJANGO_SETTINGS = {
-        "FCM_SERVER_KEY": "AAAAmOUjhgI:APA91bHRLJnknr8AeKtOWAS4qMnWpNytRNeRzxiZi_xKWjWmpCaINNWnupZb4EtChWWgtuVUaT_LA8LkaMWeHJV2Daxxy7dc_lzrABou3AwbB90htU4e0waQrsEeF7awajpObdn8oiKr"
+    "FCM_SERVER_KEY": config('FCM_SERVER_KEY')
 }
 
 
@@ -265,5 +265,5 @@ if os.path.exists(f):
     sys.modules[module_name] = module
     exec(open(f, 'rb').read())
 
-cred = credentials.Certificate(os.path.join(PROJECT_APP, '/home/tapan/Downloads/lively-transit-343516-a59c429bb4fb.json'))
+cred = credentials.Certificate(os.path.join(PROJECT_APP, config('PATH_TO_FCM_CREDS')))
 firebase_admin.initialize_app(cred)
