@@ -1,3 +1,4 @@
+import datetime
 import json
 
 from django.db.models import Q
@@ -392,9 +393,11 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         if query_data.get('status') == 'unverified':
             filters = filters & Q(is_verified=False)
         if data.get('from_obs_data'):
-            filters = filters & Q(observationimagemapping__obs_date__gte=data.get('from_obs_data'))
+            date_time_obj = datetime.datetime.strptime(data.get('from_obs_data'), "%d/%m/%Y %H:%M")
+            filters = filters & Q(observationimagemapping__obs_date_time_as_per_utc__gte=date_time_obj)
         if data.get('to_obs_data'):
-            filters = filters & Q(observationimagemapping__obs_date__lte=data.get('to_obs_data'))
+            date_time_obj = datetime.datetime.strptime(data.get('to_obs_data'), "%d/%m/%Y %H:%M")
+            filters = filters & Q(observationimagemapping__obs_date_time_as_per_utc__lte=date_time_obj)
         if data.get('camera_type'):
             filters = filters & Q(camera__camera_type__iexact=data.get('camera_type'))
         if data.get('fps'):

@@ -75,9 +75,20 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
     def get_user_details(self, request, *args, **kwargs):
         user = request.user
         serializer = self.serializer_class(user).data
+        is_check = False
+        camera_obj = None
+        camera = None
 
         try:
             camera_obj = CameraSetting.objects.get(user=user, is_profile_camera_settings=True)
+            is_check = True
+        except CameraSetting.DoesNotExist:
+            camera = None
+        except CameraSetting.MultipleObjectsReturned:
+            camera_obj = CameraSetting.objects.filter(user=user, is_profile_camera_settings=True).last()
+            is_check = True
+
+        if is_check:
             camera = {
                 'camera_type': camera_obj.camera_type,
                 'iso': camera_obj.iso,
@@ -89,8 +100,6 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
                 'question_field_one': camera_obj.question_field_one,
                 'question_field_two': camera_obj.question_field_two
             }
-        except CameraSetting.DoesNotExist:
-            camera = None
 
         serializer['camera'] = camera
         serializer['is_superuser'] = request.user.is_superuser
@@ -173,5 +182,7 @@ class CameraSettingsApiView(viewsets.ModelViewSet):
             return CameraSetting.objects.get(user_id=self.request.user.id, is_profile_camera_settings=True)
         except CameraSetting.DoesNotExist:
             raise Http404
+        except CameraSetting.MultipleObjectsReturned:
+            return CameraSetting.objects.filter(user_id=self.request.user.id, is_profile_camera_settings=True).last()
 
 

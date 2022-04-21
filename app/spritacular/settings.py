@@ -249,7 +249,19 @@ CELERY_RESULT_SERIALIZER = 'json'
 
 
 FCM_DJANGO_SETTINGS = {
-    "FCM_SERVER_KEY": config('FCM_SERVER_KEY')
+    "FCM_SERVER_KEY": config('FCM_SERVER_KEY'),
+    "APP_VERBOSE_NAME": "[string for AppConfig's verbose_name]",
+    # true if you want to have only one active device per registered user at a time
+    # default: False
+    "ONE_DEVICE_PER_USER": True,
+    # devices to which notifications cannot be sent,
+    # are deleted upon receiving error response from FCM
+    # default: False
+    "DELETE_INACTIVE_DEVICES": True,
+    # Transform create of an existing Device (based on registration id) into
+    # an update. See the section
+    # "Update of device with duplicate registration ID" for more details.
+    "UPDATE_ON_DUPLICATE_REG_ID": True,
 }
 
 
