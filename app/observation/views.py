@@ -263,7 +263,7 @@ class ObservationGalleryViewSet(ListAPIView):
         data = request.query_params
 
         # Storing gallery filters
-        filters = Q(is_submit=True, is_reject=False)
+        filters = Q(is_submit=True, is_reject=False, observationimagemapping__image__isnull=False)
         if data.get('country'):
             filters = filters & Q(observationimagemapping__country_code__iexact=data.get('country'))
         if data.get('category'):
