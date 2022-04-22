@@ -16,7 +16,7 @@ def create_notification(sender, instance, created, **kwargs):
     data = f"{instance.text}"
     user = instance.observation.user    # To user
     from_user = instance.user   # From user
-    sent_at = timezone.now()
+    sent_at = datetime.datetime.now()
     notification = Notification.objects.create(title=title, message=data)
     result = send_notification_user(title, data, notification, sent_at, user, from_user)
     if result:
@@ -32,7 +32,7 @@ def create_notification(sender, instance, created, **kwargs):
     data = f"{instance.user.first_name} votes your {instance.category.title} observation."
     user = instance.observation.user    # To user
     from_user = instance.user  # From user
-    sent_at = timezone.now()
+    sent_at = datetime.datetime.now()
     notification = Notification.objects.create(title=title, message=data)
     result = send_notification_user(title, data, notification, sent_at, user, from_user)
     if result:
