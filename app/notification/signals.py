@@ -49,7 +49,7 @@ def send_notification_user(title, data, notification, sent_at, user, from_user):
         for device in devices:
             sm = device.send_message(Message(notification=Notify(title=title, body=data, image=from_user_profile_pic),
                                              data={"from_user": f"{from_user.first_name} {from_user.last_name}",
-                                                   "sent_at": str(sent_at), "notification_id": notification.id}))
+                                                   "sent_at": str(sent_at), "notification_id": str(notification.id)}))
             print(sm)
         return True
     except Exception as e:
