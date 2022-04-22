@@ -8,8 +8,12 @@ urlpatterns = [
     # path('', include('users.urls')),
     path('admin/', admin.site.urls),
     # path('api-auth/', include('rest_framework.urls')),
+    # Users app urls
     path('api/users/', include('users.urls')),
+    # Observation app urls
     path('api/observation/', include('observation.urls')),
+    # Notification app urls
+    path('api/notification/', include('notification.urls')),
     # Only allow creation of devices by authenticated users
     path('api/devices/', FCMDeviceAuthorizedViewSet.as_view({'post': 'create'}), name='create_fcm_device')
 ]

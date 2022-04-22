@@ -2,6 +2,7 @@ import datetime
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 from fcm_django.models import FCMDevice
 from firebase_admin.messaging import Message, Notification as Notify
 
@@ -15,7 +16,7 @@ def create_notification(sender, instance, created, **kwargs):
     data = f"{instance.text}"
     user = instance.observation.user    # To user
     from_user = instance.user   # From user
-    sent_at = datetime.datetime.now()
+    sent_at = timezone.now()
     notification = Notification.objects.create(title=title, message=data)
     result = send_notification_user(title, data, notification, sent_at, user, from_user)
     if result:
@@ -31,7 +32,7 @@ def create_notification(sender, instance, created, **kwargs):
     data = f"{instance.user.first_name} votes your {instance.category.title} observation."
     user = instance.observation.user    # To user
     from_user = instance.user  # From user
-    sent_at = datetime.datetime.now()
+    sent_at = timezone.now()
     notification = Notification.objects.create(title=title, message=data)
     result = send_notification_user(title, data, notification, sent_at, user, from_user)
     if result:
@@ -48,7 +49,7 @@ def send_notification_user(title, data, notification, sent_at, user, from_user):
         for device in devices:
             sm = device.send_message(Message(notification=Notify(title=title, body=data, image=from_user_profile_pic),
                                              data={"from_user": f"{from_user.first_name} {from_user.last_name}",
-                                                   "sent_at": str(sent_at)}))
+                                                   "sent_at": str(sent_at), "notification_id": notification.id}))
             print(sm)
         return True
     except Exception as e:
