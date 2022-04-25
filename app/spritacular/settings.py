@@ -268,5 +268,5 @@ if os.path.exists(f):
     sys.modules[module_name] = module
     exec(open(f, 'rb').read())
 
-cred = credentials.Certificate(os.path.join(PROJECT_APP, config('PATH_TO_FCM_CREDS')))
+cred = credentials.Certificate(os.path.join(BASE_DIR, config('PATH_TO_FCM_CREDS')))
 firebase_admin.initialize_app(cred)
