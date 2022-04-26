@@ -1,7 +1,9 @@
 import sys
+import uuid
 from io import BytesIO
 
 from PIL import Image
+from django.core.files.storage import FileSystemStorage
 from django.core.files.uploadedfile import InMemoryUploadedFile
 
 
@@ -41,3 +43,22 @@ def compress_image(obs_image, file_name):
         sys.getsizeof(output),
         None,
     )
+
+
+def compress_and_save_image_locally(image_obj):
+    """
+    function for saving inMemoryFileObject of image locally.
+    :param image_obj:
+    :return: filename
+    """
+    newfile_name = f"{uuid.uuid4()}.{image_obj.name.split('.')[-1]}"  # creating unique file name
+
+    # First saving original file locally.
+    fs = FileSystemStorage(location="")
+    file_name = fs.save(newfile_name, image_obj)
+    image_file_name = fs.url(file_name)
+
+    compressed_image = compress_image(image_obj, newfile_name)  # Compression function call
+
+    return image_file_name, compressed_image
+
