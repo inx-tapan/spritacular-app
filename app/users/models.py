@@ -23,7 +23,7 @@ class BaseModel(models.Model):
 class User(AbstractUser):
 
     username = None
-    uid = models.UUIDField(default=uuid.uuid4, unique=True)
+    uid = models.UUIDField(default=uuid.uuid4)
     email = models.CharField(max_length=1024, unique=True)
     location = models.CharField(max_length=256, null=True, blank=True)
     place_uid = models.CharField(max_length=256, null=True, blank=True)

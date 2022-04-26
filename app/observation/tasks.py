@@ -43,8 +43,6 @@ from observation.models import ObservationImageMapping
 #     obs_image_map_obj.compressed_image = image_file
 #     obs_image_map_obj.save()
 
-from django.conf import settings
-
 
 @shared_task(name="get_original_image")
 def get_original_image(obs_id):
