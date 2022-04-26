@@ -2,6 +2,7 @@ import datetime
 import json
 
 from django.db.models import Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
@@ -16,7 +17,7 @@ from .models import (Observation, Category, ObservationComment, ObservationLike,
                      VerifyObservation, ObservationReasonForReject)
 from constants import NOT_FOUND, OBS_FORM_SUCCESS, SOMETHING_WENT_WRONG
 from rest_framework.pagination import PageNumberPagination
-
+import pandas as pd
 
 class ImageMetadataViewSet(APIView):
     serializer_class = ImageMetadataSerializer
@@ -446,3 +447,38 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response({'data': serializer.data})
 
 
+class GenerateObservationCSVViewSet(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        observation_list = request.data.get('observation_ids')
+        observation_filter = Observation.objects.filter(id__in=observation_list)
+
+        # fields for dataframe
+        q = observation_filter.values('id',
+                                      'user__first_name',
+                                      'user__last_name',
+                                      'observationimagemapping__country_code',
+                                      'observationimagemapping__location',
+                                      'observationimagemapping__latitude',
+                                      'observationimagemapping__longitude',
+                                      'observationimagemapping__obs_date_time_as_per_utc',
+                                      'observationimagemapping__time_accuracy',
+                                      'observationimagemapping__is_precise_azimuth',
+                                      'observationimagemapping__azimuth',
+                                      'observationimagemapping__timezone').distinct('id')
+
+        # converting queryset into dataframe
+        df = pd.DataFrame.from_records(q)
+
+        # renaming column for csv file
+        df.columns = ['id', 'first_name', 'last_name', 'country_code',
+                      'location', 'latitude', 'longitude', 'obs_date_time_as_per_utc',
+                      'time_accuracy', 'is_precise_azimuth', 'azimuth', 'timezone']
+
+        # csv file generation
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename=observation_data.csv'
+        df.to_csv(path_or_buf=response, index=False)
+
+        return response
