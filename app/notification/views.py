@@ -35,11 +35,11 @@ class UserNotificationViewSet(ListAPIView):
                 from_user_profile_pic = notif.from_user.profile_image.url if notif.from_user.profile_image else ""
                 record = {
                     "data": {"from_user": f"{notif.from_user.first_name} {notif.from_user.last_name}",
-                             "sent_at": str(notif.sent_at), "notification_id": notif.notification.id},
+                             "sent_at": str(notif.sent_at), "notification_id": notif.notification.id,
+                             "from_user_profile_pic": from_user_profile_pic},
                     "notification": {
                         "body": notif.notification.message,
-                        "title": notif.notification.title,
-                        "image": from_user_profile_pic
+                        "title": notif.notification.title
                     }
                 }
 
