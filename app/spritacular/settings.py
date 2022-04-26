@@ -9,14 +9,20 @@ https://docs.djangoproject.com/en/4.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.0/ref/settings/
 """
+
 import os
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
 
+import firebase_admin
+from firebase_admin import credentials
+
+
+from firebase_admin import initialize_app
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
@@ -29,7 +35,6 @@ DEBUG = True if config('DEBUG', False) == 'True' else False
 
 ALLOWED_HOSTS = ["*"]
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -41,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'users.apps.UsersConfig',
     'observation.apps.ObservationConfig',
+    'notification.apps.NotificationConfig',
     'storages',
 
     # rest_framework
@@ -49,6 +55,9 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'django_rest_passwordreset',
     'rest_framework_simplejwt.token_blacklist',
+
+    # Firebase Cloud Messaging
+    'fcm_django',
 ]
 
 AUTH_USER_MODEL = 'users.User'
@@ -106,7 +115,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'spritacular.wsgi.application'
-
 
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
@@ -183,7 +191,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
@@ -214,7 +221,7 @@ AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
 AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME')
 AWS_DEFAULT_ACL = config('AWS_DEFAULT_ACL')
 AWS_S3_FILE_OVERWRITE = False  # for handling files with duplicate names
-# AWS_S3_CUSTOM_DOMAIN = config('AWS_S3_CUSTOM_DOMAIN')
+AWS_S3_CUSTOM_DOMAIN = config('AWS_S3_CUSTOM_DOMAIN')
 
 FRONTEND_URL = config('FRONTEND_URL')
 
@@ -239,3 +246,27 @@ CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND')
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+
+
+FCM_DJANGO_SETTINGS = {
+    "FCM_SERVER_KEY": config('FCM_SERVER_KEY'),
+    "ONE_DEVICE_PER_USER": True,
+    "DELETE_INACTIVE_DEVICES": True,
+    "UPDATE_ON_DUPLICATE_REG_ID": True
+}
+
+
+# plug in local settings if any
+PROJECT_APP = os.path.basename(BASE_DIR)
+f = os.path.join(PROJECT_APP, 'settings.py')
+if os.path.exists(f):
+    import sys
+    import importlib
+    module_name = f'{PROJECT_APP}.settings'
+    module = importlib.util.module_from_spec(module_name)
+    module.__file__ = f
+    sys.modules[module_name] = module
+    exec(open(f, 'rb').read())
+
+cred = credentials.Certificate(os.path.join(BASE_DIR, config('PATH_TO_FCM_CREDS')))
+firebase_admin.initialize_app(cred)

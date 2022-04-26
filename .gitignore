@@ -12,3 +12,5 @@ media/
 /app/.elasticbeanstalk/*
 !/app/.elasticbeanstalk/*.cfg.yml
 !/app/.elasticbeanstalk/*.global.yml
+
+app/fcm-spritacular.json

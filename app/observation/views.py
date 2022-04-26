@@ -1,6 +1,8 @@
+import datetime
 import json
 
 from django.db.models import Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
@@ -15,7 +17,7 @@ from .models import (Observation, Category, ObservationComment, ObservationLike,
                      VerifyObservation, ObservationReasonForReject)
 from constants import NOT_FOUND, OBS_FORM_SUCCESS, SOMETHING_WENT_WRONG
 from rest_framework.pagination import PageNumberPagination
-
+import pandas as pd
 
 class ImageMetadataViewSet(APIView):
     serializer_class = ImageMetadataSerializer
@@ -41,6 +43,29 @@ class CategoryViewSet(viewsets.ModelViewSet):
             data.append(category_details)
 
         return Response(data, status=status.HTTP_200_OK)
+
+
+class HomeViewSet(ListAPIView):
+    serializer_class = ObservationSerializer
+
+    def get(self, request, *args, **kwargs):
+        latest_observation = Observation.objects.filter(is_verified=True,
+                                                        observationimagemapping__image__isnull=False,
+                                                        observationimagemapping__compressed_image__isnull=False
+                                                        ).order_by('-pk').distinct('pk')[:5]
+        observation_count = Observation.objects.filter().count()
+        observation_country_count = Observation.objects.filter().distinct('observationimagemapping__country_code'
+                                                                          ).count()
+        observation_user_count = Observation.objects.filter().distinct('user_id').count()
+
+        serializer = self.serializer_class(latest_observation, many=True,
+                                           context={'user_observation_collection': True, 'request': request})
+
+        return Response({'data': {'latest_observation': serializer.data,
+                                  'observation_count': observation_count,
+                                  'observation_country_count': observation_country_count,
+                                  'observation_user_count': observation_user_count}},
+                        status=status.HTTP_200_OK)
 
 
 class UploadObservationViewSet(viewsets.ModelViewSet):
@@ -262,7 +287,7 @@ class ObservationGalleryViewSet(ListAPIView):
         data = request.query_params
 
         # Storing gallery filters
-        filters = Q(is_submit=True, is_reject=False)
+        filters = Q(is_submit=True, is_reject=False, observationimagemapping__image__isnull=False)
         if data.get('country'):
             filters = filters & Q(observationimagemapping__country_code__iexact=data.get('country'))
         if data.get('category'):
@@ -392,9 +417,11 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         if query_data.get('status') == 'unverified':
             filters = filters & Q(is_verified=False)
         if data.get('from_obs_data'):
-            filters = filters & Q(observationimagemapping__obs_date__gte=data.get('from_obs_data'))
+            date_time_obj = datetime.datetime.strptime(data.get('from_obs_data'), "%d/%m/%Y %H:%M")
+            filters = filters & Q(observationimagemapping__obs_date_time_as_per_utc__gte=date_time_obj)
         if data.get('to_obs_data'):
-            filters = filters & Q(observationimagemapping__obs_date__lte=data.get('to_obs_data'))
+            date_time_obj = datetime.datetime.strptime(data.get('to_obs_data'), "%d/%m/%Y %H:%M")
+            filters = filters & Q(observationimagemapping__obs_date_time_as_per_utc__lte=date_time_obj)
         if data.get('camera_type'):
             filters = filters & Q(camera__camera_type__iexact=data.get('camera_type'))
         if data.get('fps'):
@@ -420,3 +447,38 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response({'data': serializer.data})
 
 
+class GenerateObservationCSVViewSet(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        observation_list = request.data.get('observation_ids')
+        observation_filter = Observation.objects.filter(id__in=observation_list)
+
+        # fields for dataframe
+        q = observation_filter.values('id',
+                                      'user__first_name',
+                                      'user__last_name',
+                                      'observationimagemapping__country_code',
+                                      'observationimagemapping__location',
+                                      'observationimagemapping__latitude',
+                                      'observationimagemapping__longitude',
+                                      'observationimagemapping__obs_date_time_as_per_utc',
+                                      'observationimagemapping__time_accuracy',
+                                      'observationimagemapping__is_precise_azimuth',
+                                      'observationimagemapping__azimuth',
+                                      'observationimagemapping__timezone').distinct('id')
+
+        # converting queryset into dataframe
+        df = pd.DataFrame.from_records(q)
+
+        # renaming column for csv file
+        df.columns = ['id', 'first_name', 'last_name', 'country_code',
+                      'location', 'latitude', 'longitude', 'obs_date_time_as_per_utc',
+                      'time_accuracy', 'is_precise_azimuth', 'azimuth', 'timezone']
+
+        # csv file generation
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename=observation_data.csv'
+        df.to_csv(path_or_buf=response, index=False)
+
+        return response
