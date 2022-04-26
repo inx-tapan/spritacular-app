@@ -1,11 +1,13 @@
 from django.urls import path
 from .views import (ImageMetadataViewSet, UploadObservationViewSet, CategoryViewSet, ObservationCommentViewSet,
                     ObservationLikeViewSet, ObservationWatchCountViewSet, ObservationGalleryViewSet,
-                    ObservationVoteViewSet, ObservationVerifyViewSet, ObservationDashboardViewSet)
+                    ObservationVoteViewSet, ObservationVerifyViewSet, ObservationDashboardViewSet, HomeViewSet)
 
 urlpatterns = [
     # EXIF data from image.
     path('metadata/', ImageMetadataViewSet.as_view(), name="get_metadata"),
+    # Homepage
+    path('home/', HomeViewSet.as_view(), name="home"),
     # List of category
     path('get_category_list/', CategoryViewSet.as_view({'get': 'list'}), name="get_category_list"),
     # Upload observation

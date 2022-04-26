@@ -44,6 +44,29 @@ class CategoryViewSet(viewsets.ModelViewSet):
         return Response(data, status=status.HTTP_200_OK)
 
 
+class HomeViewSet(ListAPIView):
+    serializer_class = ObservationSerializer
+
+    def get(self, request, *args, **kwargs):
+        latest_observation = Observation.objects.filter(is_verified=True,
+                                                        observationimagemapping__image__isnull=False,
+                                                        observationimagemapping__compressed_image__isnull=False
+                                                        ).order_by('-pk').distinct('pk')[:5]
+        observation_count = Observation.objects.filter().count()
+        observation_country_count = Observation.objects.filter().distinct('observationimagemapping__country_code'
+                                                                          ).count()
+        observation_user_count = Observation.objects.filter().distinct('user_id').count()
+
+        serializer = self.serializer_class(latest_observation, many=True,
+                                           context={'user_observation_collection': True, 'request': request})
+
+        return Response({'data': {'latest_observation': serializer.data,
+                                  'observation_count': observation_count,
+                                  'observation_country_count': observation_country_count,
+                                  'observation_user_count': observation_user_count}},
+                        status=status.HTTP_200_OK)
+
+
 class UploadObservationViewSet(viewsets.ModelViewSet):
     """
     CRUD operations for observations
