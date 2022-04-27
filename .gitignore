@@ -1,0 +1,16 @@
+*.pyc
+*.pyo
+.idea/**
+app/.idea/**
+.venv/
+*.sqlite3
+*.env
+media/
+/app/staticfiles/
+
+# Elastic Beanstalk Files
+/app/.elasticbeanstalk/*
+!/app/.elasticbeanstalk/*.cfg.yml
+!/app/.elasticbeanstalk/*.global.yml
+
+app/fcm-spritacular.json
