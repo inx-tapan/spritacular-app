@@ -282,6 +282,7 @@ class ObservationGalleryViewSet(ListAPIView):
     Observation gallery page api with paginated response.
     """
     pagination_class = PageNumberPagination
+    queryset = Observation.objects.all()
 
     def get(self, request, *args, **kwargs):
         data = request.query_params
@@ -402,6 +403,7 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, IsAdmin)
     serializer_class = ObservationSerializer
     pagination_class = PageNumberPagination
+    queryset = Observation.objects.all()
 
     def create(self, request, *args, **kwargs):
         query_data = request.query_params

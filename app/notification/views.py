@@ -20,6 +20,7 @@ class UserNotificationViewSet(ListAPIView):
     User notification api.
     """
     pagination_class = NotificationPagination
+    queryset = UserNotification.objects.all()
 
     def get(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
