@@ -90,7 +90,7 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://34.205.152.253:3000",
-    "http://dev.spritacular.org"
+    "https://dev.spritacular.org"
 ]
 
 CSRF_TRUSTED_ORIGINS = ['https://api.spritacular.org', 'http://127.0.0.1:8000']
