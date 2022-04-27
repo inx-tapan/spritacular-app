@@ -93,6 +93,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://dev.spritacular.org"
 ]
 
+CSRF_TRUSTED_ORIGINS = ['https://api.spritacular.org', 'http://127.0.0.1:8000']
+
 CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'spritacular.urls'
