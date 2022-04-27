@@ -60,7 +60,9 @@ jsonschema==3.2.0
 kombu==5.2.4
 Markdown==3.3.6
 msgpack==1.0.3
+numpy==1.22.3
 packaging==21.3
+pandas==1.4.2
 paramiko==2.9.2
 pathspec==0.9.0
 Pillow==9.0.1
