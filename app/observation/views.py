@@ -452,7 +452,7 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
 class GenerateObservationCSVViewSet(APIView):
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         observation_list = request.data.get('observation_ids')
         observation_filter = Observation.objects.filter(id__in=observation_list)
 
@@ -479,7 +479,7 @@ class GenerateObservationCSVViewSet(APIView):
                       'time_accuracy', 'is_precise_azimuth', 'azimuth', 'timezone']
 
         # csv file generation
-        response = HttpResponse(content_type='text/csv')
+        response = HttpResponse(content_type='text/csv', status=status.HTTP_200_OK)
         response['Content-Disposition'] = 'attachment; filename=observation_data.csv'
         df.to_csv(path_or_buf=response, index=False)
 
