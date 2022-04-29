@@ -453,7 +453,7 @@ class GenerateObservationCSVViewSet(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
-        observation_list = request.data.get('observation_ids')
+        observation_list = request.data.get('observation_ids', [])
         observation_filter = Observation.objects.filter(id__in=observation_list)
 
         # fields for dataframe
