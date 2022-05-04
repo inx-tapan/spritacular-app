@@ -288,7 +288,7 @@ class ObservationGalleryViewSet(ListAPIView):
         data = request.query_params
 
         # Storing gallery filters
-        filters = Q(is_submit=True, is_reject=False, observationimagemapping__image__isnull=False)
+        filters = Q(is_submit=True, is_reject=False)
         if data.get('country'):
             filters = filters & Q(observationimagemapping__country_code__iexact=data.get('country'))
         if data.get('category'):
@@ -300,11 +300,16 @@ class ObservationGalleryViewSet(ListAPIView):
 
         if request.user.is_authenticated and (request.user.is_trained or request.user.is_superuser):
             # Trained user can see both verified and unverified observation on gallery screen.
-            observation_filter = Observation.objects.filter(filters).order_by('-pk').distinct('id')
+            observation_filter = Observation.objects.filter(filters).exclude(Q(observationimagemapping__image=None) |
+                                                                             Q(observationimagemapping__image='')
+                                                                             ).order_by('-pk').distinct('id')
         else:
             # Unauthenticated and untrained user can see only verified observations.
             observation_filter = Observation.objects.filter(is_submit=True,
-                                                            is_verified=True).order_by('-pk').distinct('id')
+                                                            is_verified=True
+                                                            ).exclude(Q(observationimagemapping__image=None) |
+                                                                      Q(observationimagemapping__image='')
+                                                                      ).order_by('-pk').distinct('id')
 
         page = self.paginate_queryset(observation_filter)
         if not page:
@@ -409,7 +414,7 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         query_data = request.query_params
         data = request.data
 
-        filters = Q(is_submit=True, observationimagemapping__image__isnull=False)
+        filters = Q(is_submit=True)
         if query_data.get('country'):
             filters = filters & Q(observationimagemapping__country_code__iexact=query_data.get('country'))
         if query_data.get('category'):
@@ -435,7 +440,9 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         if data.get('shutter_speed'):
             filters = filters & Q(camera__shutter_speed__iexact=data.get('shutter_speed'))
 
-        observation_filter = Observation.objects.filter(filters).order_by('-pk').distinct('id')
+        observation_filter = Observation.objects.filter(filters).exclude(Q(observationimagemapping__image=None) |
+                                                                         Q(observationimagemapping__image='')
+                                                                         ).order_by('-pk').distinct('id')
 
         page = self.paginate_queryset(observation_filter)
         if not page:
