@@ -223,7 +223,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 class ObservationImageCheck(APIView):
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         try:
             obs_obj = Observation.objects.get(pk=kwargs.get('pk'), user_id=request.user.id)
         except Observation.DoesNotExist:
