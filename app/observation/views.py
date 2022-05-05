@@ -221,10 +221,11 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
 
 class ObservationImageCheck(APIView):
+    permission_classes = (IsAuthenticated,)
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         try:
-            obs_obj = Observation.objects.get(pk=kwargs.get('pk'), user_id=request.user)
+            obs_obj = Observation.objects.get(pk=kwargs.get('pk'), user_id=request.user.id)
         except Observation.DoesNotExist:
             return Response(NOT_FOUND, status=status.HTTP_200_OK)
 
@@ -490,7 +491,10 @@ class GenerateObservationCSVViewSet(APIView):
                                       'observationimagemapping__time_accuracy',
                                       'observationimagemapping__is_precise_azimuth',
                                       'observationimagemapping__azimuth',
-                                      'observationimagemapping__timezone').distinct('id')
+                                      'observationimagemapping__timezone',
+                                      'is_submit',
+                                      'is_verified',
+                                      'is_reject').distinct('id')
 
         # converting queryset into dataframe
         df = pd.DataFrame.from_records(q)
@@ -498,7 +502,8 @@ class GenerateObservationCSVViewSet(APIView):
         # renaming column for csv file
         df.columns = ['id', 'first_name', 'last_name', 'country_code',
                       'location', 'latitude', 'longitude', 'obs_date_time_as_per_utc',
-                      'time_accuracy', 'is_precise_azimuth', 'azimuth', 'timezone']
+                      'time_accuracy', 'is_precise_azimuth', 'azimuth', 'timezone', 'is_submit', 'is_verified',
+                      'is_reject']
 
         # csv file generation
         response = HttpResponse(content_type='text/csv', status=status.HTTP_200_OK)
