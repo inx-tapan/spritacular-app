@@ -14,7 +14,7 @@ from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
 from users.permissions import IsAdminOrTrained, IsAdmin
 from .models import (Observation, Category, ObservationComment, ObservationLike, ObservationWatchCount,
-                     VerifyObservation, ObservationReasonForReject)
+                     VerifyObservation, ObservationReasonForReject, ObservationImageMapping)
 from constants import NOT_FOUND, OBS_FORM_SUCCESS, SOMETHING_WENT_WRONG
 from rest_framework.pagination import PageNumberPagination
 import pandas as pd
@@ -220,6 +220,22 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
                                                 'draft_count': draft_count})
 
 
+class ObservationImageCheck(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            obs_obj = Observation.objects.get(pk=kwargs.get('pk'), user_id=request.user.id)
+        except Observation.DoesNotExist:
+            return Response(NOT_FOUND, status=status.HTTP_200_OK)
+
+        image_data = []
+        for im in ObservationImageMapping.objects.filter(observation=obs_obj).order_by('pk'):
+            image_data.append(im.image.url if im.image else None)
+
+        return Response({'data': image_data, 'status': 1}, status=status.HTTP_200_OK)
+
+
 class ObservationCommentViewSet(viewsets.ModelViewSet):
     """
     CRUD operations for observation comments
@@ -288,7 +304,7 @@ class ObservationGalleryViewSet(ListAPIView):
         data = request.query_params
 
         # Storing gallery filters
-        filters = Q(is_submit=True, is_reject=False, observationimagemapping__image__isnull=False)
+        filters = Q(is_submit=True, is_reject=False)
         if data.get('country'):
             filters = filters & Q(observationimagemapping__country_code__iexact=data.get('country'))
         if data.get('category'):
@@ -300,11 +316,16 @@ class ObservationGalleryViewSet(ListAPIView):
 
         if request.user.is_authenticated and (request.user.is_trained or request.user.is_superuser):
             # Trained user can see both verified and unverified observation on gallery screen.
-            observation_filter = Observation.objects.filter(filters).order_by('-pk').distinct('id')
+            observation_filter = Observation.objects.filter(filters).exclude(Q(observationimagemapping__image=None) |
+                                                                             Q(observationimagemapping__image='')
+                                                                             ).order_by('-pk').distinct('id')
         else:
             # Unauthenticated and untrained user can see only verified observations.
             observation_filter = Observation.objects.filter(is_submit=True,
-                                                            is_verified=True).order_by('-pk').distinct('id')
+                                                            is_verified=True
+                                                            ).exclude(Q(observationimagemapping__image=None) |
+                                                                      Q(observationimagemapping__image='')
+                                                                      ).order_by('-pk').distinct('id')
 
         page = self.paginate_queryset(observation_filter)
         if not page:
@@ -409,7 +430,7 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         query_data = request.query_params
         data = request.data
 
-        filters = Q(is_submit=True, observationimagemapping__image__isnull=False)
+        filters = Q(is_submit=True)
         if query_data.get('country'):
             filters = filters & Q(observationimagemapping__country_code__iexact=query_data.get('country'))
         if query_data.get('category'):
@@ -435,7 +456,9 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         if data.get('shutter_speed'):
             filters = filters & Q(camera__shutter_speed__iexact=data.get('shutter_speed'))
 
-        observation_filter = Observation.objects.filter(filters).order_by('-pk').distinct('id')
+        observation_filter = Observation.objects.filter(filters).exclude(Q(observationimagemapping__image=None) |
+                                                                         Q(observationimagemapping__image='')
+                                                                         ).order_by('-pk').distinct('id')
 
         page = self.paginate_queryset(observation_filter)
         if not page:
@@ -468,7 +491,10 @@ class GenerateObservationCSVViewSet(APIView):
                                       'observationimagemapping__time_accuracy',
                                       'observationimagemapping__is_precise_azimuth',
                                       'observationimagemapping__azimuth',
-                                      'observationimagemapping__timezone').distinct('id')
+                                      'observationimagemapping__timezone',
+                                      'is_submit',
+                                      'is_verified',
+                                      'is_reject').distinct('id')
 
         # converting queryset into dataframe
         df = pd.DataFrame.from_records(q)
@@ -476,7 +502,8 @@ class GenerateObservationCSVViewSet(APIView):
         # renaming column for csv file
         df.columns = ['id', 'first_name', 'last_name', 'country_code',
                       'location', 'latitude', 'longitude', 'obs_date_time_as_per_utc',
-                      'time_accuracy', 'is_precise_azimuth', 'azimuth', 'timezone']
+                      'time_accuracy', 'is_precise_azimuth', 'azimuth', 'timezone', 'is_submit', 'is_verified',
+                      'is_reject']
 
         # csv file generation
         response = HttpResponse(content_type='text/csv', status=status.HTTP_200_OK)
