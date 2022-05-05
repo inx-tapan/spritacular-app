@@ -14,7 +14,7 @@ from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
 from users.permissions import IsAdminOrTrained, IsAdmin
 from .models import (Observation, Category, ObservationComment, ObservationLike, ObservationWatchCount,
-                     VerifyObservation, ObservationReasonForReject)
+                     VerifyObservation, ObservationReasonForReject, ObservationImageMapping)
 from constants import NOT_FOUND, OBS_FORM_SUCCESS, SOMETHING_WENT_WRONG
 from rest_framework.pagination import PageNumberPagination
 import pandas as pd
@@ -218,6 +218,21 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response({'data': serializer.data, 'verified_count': verified_count,
                                                 'unverified_count': unverified_count, 'denied_count': denied_count,
                                                 'draft_count': draft_count})
+
+
+class ObservationImageCheck(APIView):
+
+    def get(self, request, *args, **kwargs):
+        try:
+            obs_obj = Observation.objects.get(pk=kwargs.get('pk'), user_id=request.user)
+        except Observation.DoesNotExist:
+            return Response(NOT_FOUND, status=status.HTTP_200_OK)
+
+        image_data = []
+        for im in ObservationImageMapping.objects.filter(observation=obs_obj).order_by('pk'):
+            image_data.append(im.image.url if im.image else None)
+
+        return Response({'data': image_data, 'status': 1}, status=status.HTTP_200_OK)
 
 
 class ObservationCommentViewSet(viewsets.ModelViewSet):
