@@ -1,3 +1,5 @@
+import constants
+
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 from django.core.validators import FileExtensionValidator
@@ -7,21 +9,6 @@ from django.utils import timezone
 from django.contrib.auth.password_validation import validate_password
 
 from .models import User, CameraSetting
-
-
-class UserSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(validators=[UniqueValidator(
-        queryset=User.objects.all(),
-        message='Account with this email already exists.',
-        lookup="iexact"
-    )], )
-    profile_image = serializers.ImageField(required=False,
-                                           validators=[FileExtensionValidator(['jpg', 'tiff', 'png', 'jpeg'])])
-
-    class Meta:
-        model = User
-        fields = ('first_name', 'last_name', 'email', 'password', 'location', 'profile_image')
-        extra_kwargs = {'password': {'write_only': True}}
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -35,14 +22,11 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         try:
             self.user = User.objects.get(email__iexact=authenticate_kwargs["email"])
         except User.DoesNotExist:
-            raise serializers.ValidationError({'detail': 'No active account found with the given credentials.'},
-                                              code=401)
+            raise serializers.ValidationError({'detail': constants.NO_ACCOUNT}, code=401)
         if not self.user.check_password(authenticate_kwargs["password"]):
-            raise serializers.ValidationError({'detail': 'No active account found with the given credentials.'},
-                                              code=401)
+            raise serializers.ValidationError({'detail': constants.NO_ACCOUNT}, code=401)
 
         refresh = self.get_token(self.user)
-
         try:
             camera_obj = CameraSetting.objects.get(user=self.user, is_profile_camera_settings=True)
             camera = {
@@ -93,7 +77,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     last_name = serializers.CharField(required=True)
     email = serializers.EmailField(validators=[UniqueValidator(
         queryset=User.objects.all(),
-        message='user with this email already exists.',
+        message=constants.ACCOUNT_ALREADY_EXISTS,
         lookup="iexact"
     )], )
     location = serializers.CharField(required=True)
@@ -104,8 +88,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'first_name', 'last_name', 'email', 'password', 'location',
-                  'country_code', 'place_uid', 'profile_image', 'location_metadata')
+        fields = ('id', 'first_name', 'last_name', 'email', 'password', 'location', 'country_code',
+                  'place_uid', 'profile_image', 'location_metadata')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -158,10 +142,9 @@ class ChangePasswordSerializer(serializers.Serializer):
                 user.save()
 
             else:
-                raise serializers.ValidationError({'details': 'New password and confirm password does not match.'},
-                                                  code=400)
+                raise serializers.ValidationError({'details': constants.NEW_PASS_CONFIRM_PASS_INVALID}, code=400)
         else:
-            raise serializers.ValidationError({'details': 'Old password is incorrect.'}, code=400)
+            raise serializers.ValidationError({'details': constants.INVALID_OLD_PASS}, code=400)
 
         return validate_data
 
@@ -202,13 +185,13 @@ class CameraSettingSerializer(serializers.ModelSerializer):
                                                           question_field_two=question_field_two, user=user)
 
             if self.context.get('observation_settings'):
-                # TODO: For differentiating camera settings in profile and settings used in observations upload form.
+                # For differentiating camera settings in profile and settings used in observations upload form.
                 camera_setting.is_profile_camera_settings = False
                 camera_setting.save(update_fields=['is_profile_camera_settings'])
 
             return camera_setting
         else:
-            raise serializers.ValidationError({'details': 'Camera settings for this user already exists.'}, code=400)
+            raise serializers.ValidationError({'details': constants.CAMERA_SETTINGS_ALREADY_EXISTS}, code=400)
 
     def update(self, instance, validated_data):
         camera_type = validated_data.get('camera_type')
