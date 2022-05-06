@@ -1,4 +1,6 @@
-from django.http import Http404
+import constants
+
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
@@ -7,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
+
 from .serializers import MyTokenObtainPairSerializer
 
 from .models import User, CameraSetting
@@ -16,7 +19,7 @@ from .permissions import IsOwnerOrAdmin
 
 class RootView(APIView):
     def get(self, request):
-        return Response({}, status=status.HTTP_200_OK)
+        return HttpResponse(constants.WELCOME, status=status.HTTP_200_OK)
 
 
 class UserRegisterViewSet(viewsets.ModelViewSet):
@@ -139,12 +142,11 @@ class ChangePasswordViewSet(APIView):
             # refresh_token = request.data["refresh_token"]
             # token = RefreshToken(refresh_token)
             # token.blacklist()
-            return Response({"Success": True, "message": "Password successfully changed."}, status=status.HTTP_200_OK)
+            return Response({"Success": True, "message": constants.CHANGE_PASS_SUCCESS}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# TODO: Blackout refresh token once the user logout.
 class LogoutViewSet(APIView):
     """
     Logout user viwset.
