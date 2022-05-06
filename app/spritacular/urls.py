@@ -16,7 +16,8 @@ urlpatterns = [
     # Notification app urls
     path('api/notification/', include('notification.urls')),
     # Only allow creation of devices by authenticated users
-    path('api/devices/', FCMDeviceAuthorizedViewSet.as_view({'post': 'create'}), name='create_fcm_device')
+    path('api/devices/', FCMDeviceAuthorizedViewSet.as_view({'post': 'create'}), name='create_fcm_device'),
+    path('api/blog/', include('blog.urls'))
 ]
 
 if settings.DEBUG:

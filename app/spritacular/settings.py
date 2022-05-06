@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'users.apps.UsersConfig',
     'observation.apps.ObservationConfig',
     'notification.apps.NotificationConfig',
+    'blog.apps.BlogConfig',
     'storages',
 
     # rest_framework
@@ -249,7 +250,7 @@ CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 
-print("+++ TEST2 +++")
+
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
@@ -276,3 +277,5 @@ if os.path.exists(f):
 
 cred = credentials.Certificate(os.path.join(BASE_DIR, config('PATH_TO_FCM_CREDS')))
 firebase_admin.initialize_app(cred)
+
+print("+++ SETTINGS-3 +++")
