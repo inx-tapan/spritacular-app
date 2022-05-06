@@ -12,7 +12,6 @@ from .views import UserRegisterViewSet, ChangePasswordViewSet, LogoutViewSet, Ca
 # urlpatterns = router.urls
 
 urlpatterns = [
-    path('', RootView.as_view(), name='root_view'),
     # Login
     path('token/', CustomObtainTokenPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

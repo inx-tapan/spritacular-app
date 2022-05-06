@@ -3,9 +3,10 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from fcm_django.api.rest_framework import FCMDeviceAuthorizedViewSet
+from users.views import RootView
 
 urlpatterns = [
-    # path('', include('users.urls')),
+    path('', RootView.as_view(), name='root_view'),
     path('admin/', admin.site.urls),
     # path('api-auth/', include('rest_framework.urls')),
     # Users app urls
