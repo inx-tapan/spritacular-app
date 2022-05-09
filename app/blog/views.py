@@ -1,7 +1,7 @@
 import constants
 
 from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
+from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from blog.models import BlogCategory, Blog
@@ -22,12 +22,21 @@ class BlogCategoryListViewSet(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
 
-class BlogViewSet(APIView):
+class BlogViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
 
-    def post(self, request, *args, **kwargs):
+    def create(self, request, *args, **kwargs):
         data = request.data
         data['user'] = request.user
         Blog.objects.create(**data)
         return Response(constants.BLOG_FORM_SUCCESS, status=status.HTTP_201_CREATED)
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            blog_obj = Blog.objects.get(pk=kwargs.get('pk'))
+        except Blog.DoesNotExist:
+            return Response(constants.NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({"title": blog_obj.title, "description": blog_obj.description,
+                         "content": blog_obj.content}, status=status.HTTP_200_OK)
 
