@@ -29,9 +29,12 @@ class BlogViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         blog_data = []
         for i in self.queryset:
-            record = {"title": i.title,
-                      "description": i.description,
-                      "content": i.content}
+            record = {
+                "id": i.id,
+                "title": i.title,
+                "description": i.description,
+                "content": i.content
+            }
 
             blog_data.append(record)
 
@@ -49,6 +52,8 @@ class BlogViewSet(viewsets.ModelViewSet):
         except Blog.DoesNotExist:
             return Response(constants.NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
-        return Response({"data": {"title": blog_obj.title, "description": blog_obj.description,
-                         "content": blog_obj.content}}, status=status.HTTP_200_OK)
+        return Response({"data": {"id": blog_obj.id,
+                                  "title": blog_obj.title,
+                                  "description": blog_obj.description,
+                                  "content": blog_obj.content}}, status=status.HTTP_200_OK)
 
