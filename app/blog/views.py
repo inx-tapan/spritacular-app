@@ -24,6 +24,18 @@ class BlogCategoryListViewSet(APIView):
 
 class BlogViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
+    queryset = Blog.objects.all()
+
+    def list(self, request, *args, **kwargs):
+        blog_data = []
+        for i in self.queryset:
+            record = {"title": i.title,
+                      "description": i.description,
+                      "content": i.content}
+
+            blog_data.append(record)
+
+        return Response({'data': blog_data}, status=status.HTTP_200_OK)
 
     def create(self, request, *args, **kwargs):
         data = request.data
@@ -37,6 +49,6 @@ class BlogViewSet(viewsets.ModelViewSet):
         except Blog.DoesNotExist:
             return Response(constants.NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
-        return Response({"title": blog_obj.title, "description": blog_obj.description,
-                         "content": blog_obj.content}, status=status.HTTP_200_OK)
+        return Response({"data": {"title": blog_obj.title, "description": blog_obj.description,
+                         "content": blog_obj.content}}, status=status.HTTP_200_OK)
 
