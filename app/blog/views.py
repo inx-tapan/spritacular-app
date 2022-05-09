@@ -24,11 +24,13 @@ class BlogCategoryListViewSet(APIView):
 
 class BlogViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
-    queryset = Blog.objects.all()
+
+    def get_queryset(self):
+        return Blog.objects.all()
 
     def list(self, request, *args, **kwargs):
         blog_data = []
-        for i in self.queryset:
+        for i in self.get_queryset():
             record = {
                 "id": i.id,
                 "title": i.title,
