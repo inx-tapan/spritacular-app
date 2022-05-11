@@ -9,5 +9,6 @@ urlpatterns = [
     # Get list of all blogs
     path('get_all_blog/', BlogViewSet.as_view({'get': 'list'}), name='get_all_blog'),
     # Upload Image
-    path('upload/', GetImageUrlViewSet.as_view(), name="upload")
+    path('upload/', GetImageUrlViewSet.as_view({'post': 'create'}), name="upload"),
+    # path('destroy/<int:pk>/', GetImageUrlViewSet.as_view({'delete': 'destroy'}), name="destroy")
 ]

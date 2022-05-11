@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Blog, BlogImageData
+from .models import Blog, BlogImageData, BlogCategory
 
 
 @admin.register(Blog)
@@ -16,3 +16,11 @@ class BlogImageDataAdmin(admin.ModelAdmin):
     Customizing admin view of BlogImageData Table
     """
     list_display = ('id', 'is_published')
+
+
+@admin.register(BlogCategory)
+class BlogCategoryDataAdmin(admin.ModelAdmin):
+    """
+    Customizing admin view of BlogCategory Table
+    """
+    list_display = ('id', 'title', 'is_active')

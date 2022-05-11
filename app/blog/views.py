@@ -44,10 +44,22 @@ class BlogViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         data = request.data
+        thumbnail_image = request.FILES.get('thumbnail_image')
+        category = data.pop('category')
         data['user'] = request.user
         image_ids = data.pop('image_ids')
-        Blog.objects.create(**data)
-        BlogImageData.objects.filter(id__in=image_ids).update(is_published=True)
+
+        if not thumbnail_image:
+            return Response({'detail': 'Thumbnail image not provided.', 'status': 0}, status=status.HTTP_404_NOT_FOUND)
+        if not category:
+            return Response({'detail': 'Category not selected.', 'status': 0}, status=status.HTTP_404_NOT_FOUND)
+
+        Blog.objects.create(**data, category_id=category, thumbnail_image=thumbnail_image)
+        for i in image_ids:
+            try:
+                BlogImageData.objects.get(id=i.get('id')).update(is_published=True)
+            except BlogImageData.DoesNotExist:
+                pass
         return Response(constants.BLOG_FORM_SUCCESS, status=status.HTTP_201_CREATED)
 
     def retrieve(self, request, *args, **kwargs):
@@ -59,12 +71,13 @@ class BlogViewSet(viewsets.ModelViewSet):
         return Response({"data": {"id": blog_obj.id,
                                   "title": blog_obj.title,
                                   "description": blog_obj.description,
-                                  "content": blog_obj.content}}, status=status.HTTP_200_OK)
+                                  "content": blog_obj.content,
+                                  "category": blog_obj.category.id}}, status=status.HTTP_200_OK)
 
 
-class GetImageUrlViewSet(APIView):
+class GetImageUrlViewSet(viewsets.ModelViewSet):
 
-    def post(self, request, *args, **kwargs):
+    def create(self, request, *args, **kwargs):
         image = request.FILES.get('image')
         blog_image_obj = BlogImageData.objects.create(image_file=image)
 
@@ -73,3 +86,12 @@ class GetImageUrlViewSet(APIView):
                          "image_id": blog_image_obj.id},
                         status=status.HTTP_201_CREATED)
 
+    def destroy(self, request, *args, **kwargs):
+        try:
+            image_obj = BlogImageData.objects.get(pk=kwargs.get('pg'))
+        except BlogImageData.DoesNotExist:
+            return Response(constants.NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
+
+        image_obj.delete()
+
+        return Response({'status': 1}, status=status.HTTP_200_OK)

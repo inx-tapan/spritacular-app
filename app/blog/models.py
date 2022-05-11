@@ -13,16 +13,9 @@ class BlogCategory(BaseModel):
 
 
 class Blog(BaseModel):
-    BLOG = 1
-    TUTORIAL = 2
-
-    ARTICLE_CHOICES = [
-        (BLOG, 'Blog'),
-        (TUTORIAL, 'Tutorial'),
-    ]
+    thumbnail_image = models.ImageField(upload_to='blog/thumbnail_image')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    # category = models.ForeignKey(BlogCategory, on_delete=models.CASCADE)
-    article_type = models.PositiveSmallIntegerField(choices=ARTICLE_CHOICES, default=BLOG)
+    category = models.ForeignKey(BlogCategory, on_delete=models.CASCADE)
     title = models.TextField(default='')
     description = models.TextField(default='')
     content = models.TextField(default='')
