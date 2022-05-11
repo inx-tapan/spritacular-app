@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from blog.models import BlogCategory, Blog
+from blog.models import BlogCategory, Blog, BlogImageData
 
 
 class BlogCategoryListViewSet(APIView):
@@ -45,7 +45,9 @@ class BlogViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         data = request.data
         data['user'] = request.user
+        image_ids = data.pop('image_ids')
         Blog.objects.create(**data)
+        BlogImageData.objects.filter(id__in=image_ids).update(is_published=True)
         return Response(constants.BLOG_FORM_SUCCESS, status=status.HTTP_201_CREATED)
 
     def retrieve(self, request, *args, **kwargs):
@@ -58,4 +60,16 @@ class BlogViewSet(viewsets.ModelViewSet):
                                   "title": blog_obj.title,
                                   "description": blog_obj.description,
                                   "content": blog_obj.content}}, status=status.HTTP_200_OK)
+
+
+class GetImageUrlViewSet(APIView):
+
+    def post(self, request, *args, **kwargs):
+        image = request.FILES.get('image')
+        blog_image_obj = BlogImageData.objects.create(image_file=image)
+
+        return Response({"uploaded": True,
+                         "url": blog_image_obj.image_file.url,
+                         "image_id": blog_image_obj.id},
+                        status=status.HTTP_201_CREATED)
 

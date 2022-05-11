@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'notification.apps.NotificationConfig',
     'blog.apps.BlogConfig',
     'storages',
+    'django_celery_beat',
 
     # rest_framework
     'corsheaders',
