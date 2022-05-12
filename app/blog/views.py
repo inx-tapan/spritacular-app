@@ -45,9 +45,9 @@ class BlogViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         data = request.data
         thumbnail_image = request.FILES.get('thumbnail_image')
-        category = data.pop('category')
+        category = data.pop('category') if data.get('category') else None
         data['user'] = request.user
-        image_ids = data.pop('image_ids')
+        image_ids = data.pop('image_ids') if data.get('image_ids') else []
 
         if not thumbnail_image:
             return Response({'detail': 'Thumbnail image not provided.', 'status': 0}, status=status.HTTP_404_NOT_FOUND)
