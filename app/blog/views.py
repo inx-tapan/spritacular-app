@@ -1,4 +1,5 @@
 import constants
+import json
 
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status, viewsets
@@ -59,13 +60,14 @@ class BlogViewSet(viewsets.ModelViewSet):
             'description': request.data.get('description')
         }
         category = request.data.get('category')
-        image_ids = request.data.get('image_ids') or []
+        image_ids_data = request.data.get('image_ids') or []
+        image_ids = json.loads(image_ids_data)
 
         Blog.objects.create(**data, category_id=category)
 
         for i in image_ids:
             try:
-                BlogImageData.objects.get(id=i.get('id')).update(is_published=True)
+                BlogImageData.objects.filter(id=i.get('id')).update(is_published=True)
             except BlogImageData.DoesNotExist:
                 pass
         return Response(constants.BLOG_FORM_SUCCESS, status=status.HTTP_201_CREATED)

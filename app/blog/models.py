@@ -43,3 +43,7 @@ def remove_file_from_s3(sender, instance, using, **kwargs):
     print("s3 file deleted")
 
 
+@receiver(models.signals.post_delete, sender=Blog)
+def remove_file_from_s3(sender, instance, using, **kwargs):
+    instance.thumbnail_image.delete(save=False)
+    print("s3 file deleted")
