@@ -43,19 +43,23 @@ class BlogViewSet(viewsets.ModelViewSet):
         return Response({'data': blog_data}, status=status.HTTP_200_OK)
 
     def create(self, request, *args, **kwargs):
-        data = request.data
-        # thumbnail_image = request.FILES.get('thumbnail_image')
-        category = data.pop('category') if data.get('category') else None
-        user = request.user
-        image_ids = data.pop('image_ids') if data.get('image_ids') else []
 
-        if not data.get('thumbnail_image'):
+        if not request.data.get('thumbnail_image'):
             return Response({'detail': 'Thumbnail image not provided.', 'status': 0}, status=status.HTTP_404_NOT_FOUND)
-        if not category:
+        if not request.data.get('category'):
             return Response({'detail': 'Category not selected.', 'status': 0}, status=status.HTTP_404_NOT_FOUND)
 
-        print(data)
-        Blog.objects.create(**data, category_id=category, user=user)
+        data = {
+            'thumbnail_image': request.data.get('thumbnail_image'),
+            'user': request.user,
+            'title': request.data.get('title'),
+            'content': request.data.get('content'),
+            'description': request.data.get('description')
+        }
+        category = request.data.get('category')
+        image_ids = request.data.get('image_ids') or []
+
+        Blog.objects.create(**data, category_id=category)
 
         for i in image_ids:
             try:
