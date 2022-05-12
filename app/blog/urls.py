@@ -1,7 +1,9 @@
 from django.urls import path
-from .views import BlogViewSet, GetImageUrlViewSet
+from .views import BlogViewSet, GetImageUrlViewSet, BlogCategoryListViewSet
 
 urlpatterns = [
+    # List of blog category
+    path('get_blog_category_list/', BlogCategoryListViewSet.as_view(), name='get_blog_category_list'),
     # Create Blog
     path('create_blog/', BlogViewSet.as_view({'post': 'create', 'get': 'retrieve'}), name='blog'),
     # Get Blog details

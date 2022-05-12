@@ -8,11 +8,11 @@ from blog.models import BlogCategory, Blog, BlogImageData
 
 
 class BlogCategoryListViewSet(APIView):
-    queryset = BlogCategory.objects.all()
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
         data = []
-        for i in self.queryset:
+        for i in BlogCategory.objects.all():
             category_details = {
                 'id': i.pk,
                 'name': i.title
