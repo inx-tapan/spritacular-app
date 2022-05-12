@@ -35,7 +35,9 @@ class BlogViewSet(viewsets.ModelViewSet):
                 "id": i.id,
                 "title": i.title,
                 "description": i.description,
-                "content": i.content
+                "content": i.content,
+                "thumbnail_image": i.thumbnail_image.url,
+                "category": i.category.id
             }
 
             blog_data.append(record)
