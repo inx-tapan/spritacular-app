@@ -31,24 +31,24 @@ class BlogViewSet(viewsets.ModelViewSet):
         permission_classes = [IsAuthenticated, IsAdmin] if self.action == 'post' else []
         return [permission() for permission in permission_classes]
 
-    def get_queryset(self, *args, **kwargs):
-        if kwargs.get('type') == 2:
-            return Blog.objects.filter(article_type=Blog.TUTORIAL)
-        else:
-            return Blog.objects.filter(article_type=Blog.BLOG)
-
     def list(self, request, *args, **kwargs):
         blog_data = []
-        for i in self.get_queryset():
+        if kwargs.get('type') == 2:
+            query_set = Blog.objects.filter(article_type=Blog.TUTORIAL)
+        else:
+            query_set = Blog.objects.filter(article_type=Blog.BLOG)
+
+        for i in query_set:
             record = {
                 "id": i.id,
                 "title": i.title,
                 "description": i.description,
                 "content": i.content,
                 "thumbnail_image": i.thumbnail_image.url,
-                "category_id": i.category.id,
-                "category_name": i.category.title,
-                "slug": i.slug
+                "category_id": i.category.id if i.category else None,
+                "category_name": i.category.title if i.category else None,
+                "slug": i.slug,
+                "type": i.article_type
             }
 
             blog_data.append(record)
