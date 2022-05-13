@@ -2,6 +2,7 @@ import constants
 import json
 
 from rest_framework.permissions import IsAuthenticated
+from users.permissions import IsAdmin
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -24,10 +25,17 @@ class BlogCategoryListViewSet(APIView):
 
 
 class BlogViewSet(viewsets.ModelViewSet):
-    permission_classes = (IsAuthenticated,)
 
-    def get_queryset(self):
-        return Blog.objects.all()
+    def get_permissions(self):
+        print(f"Blog ACTION {self.action}")
+        permission_classes = [IsAuthenticated, IsAdmin] if self.action == 'post' else []
+        return [permission() for permission in permission_classes]
+
+    def get_queryset(self, *args, **kwargs):
+        if kwargs.get('type') == 2:
+            return Blog.objects.filter(article_type=Blog.TUTORIAL)
+        else:
+            return Blog.objects.filter(article_type=Blog.BLOG)
 
     def list(self, request, *args, **kwargs):
         blog_data = []
@@ -47,13 +55,16 @@ class BlogViewSet(viewsets.ModelViewSet):
         return Response({'data': blog_data}, status=status.HTTP_200_OK)
 
     def create(self, request, *args, **kwargs):
-
+        if not request.data.get('article_type'):
+            return Response({'detail': 'Article type not selected.', 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
         if not request.data.get('thumbnail_image'):
-            return Response({'detail': 'Thumbnail image not provided.', 'status': 0}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Thumbnail image not provided.', 'status': 0},
+                            status=status.HTTP_400_BAD_REQUEST)
         if not request.data.get('category'):
-            return Response({'detail': 'Category not selected.', 'status': 0}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Category not selected.', 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
 
         data = {
+            'article_type': 1 if request.data.get('article_type') not in [1, 2] else request.data.get('article_type'),
             'thumbnail_image': request.data.get('thumbnail_image'),
             'user': request.user,
             'title': request.data.get('title'),
@@ -64,13 +75,12 @@ class BlogViewSet(viewsets.ModelViewSet):
         image_ids_data = request.data.get('image_ids') or []
         image_ids = json.loads(image_ids_data)
 
-        Blog.objects.create(**data, category_id=category)
+        blog_obj = Blog.objects.create(**data, category_id=category)
+        blog_obj.set_slug()
 
         for i in image_ids:
-            try:
-                BlogImageData.objects.filter(id=i.get('id')).update(is_published=True)
-            except BlogImageData.DoesNotExist:
-                pass
+            BlogImageData.objects.filter(id=i.get('id')).update(is_published=True)
+
         return Response(constants.BLOG_FORM_SUCCESS, status=status.HTTP_201_CREATED)
 
     def retrieve(self, request, *args, **kwargs):
