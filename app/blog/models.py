@@ -31,9 +31,7 @@ class Blog(BaseModel):
     content = models.TextField(default='')
 
     article_type = models.PositiveSmallIntegerField(choices=ARTICLE_CHOICES, default=BLOG)
-    slug = models.SlugField(max_length=500,
-                            default=''.join(random.choices(string.ascii_lowercase + string.digits, k=16)),
-                            null=True, blank=True)
+    slug = models.SlugField(max_length=500, unique=True, null=True, blank=True)
 
     def __str__(self):
         return f"Blog by {self.user.first_name} {self.user.last_name}"

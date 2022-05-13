@@ -31,6 +31,12 @@ class BlogViewSet(viewsets.ModelViewSet):
         permission_classes = [IsAuthenticated, IsAdmin] if self.action == 'post' else []
         return [permission() for permission in permission_classes]
 
+    def get_object(self, slug):
+        try:
+            return Blog.objects.get(slug__exact=slug)
+        except Blog.DoesNotExist:
+            return None
+
     def list(self, request, *args, **kwargs):
         blog_data = []
         if kwargs.get('type') == 2:
@@ -73,10 +79,16 @@ class BlogViewSet(viewsets.ModelViewSet):
             'description': request.data.get('description')
         }
         category = request.data.get('category', None)
+        category_obj = None
+        if category:
+            try:
+                category_obj = BlogCategory.objects.get(id=category)
+            except BlogCategory.DoesNotExist:
+                pass
         image_ids_data = request.data.get('image_ids') or '[]'
         image_ids = json.loads(image_ids_data)
 
-        blog_obj = Blog.objects.create(**data, category_id=category)
+        blog_obj = Blog.objects.create(**data, category=category_obj)
         blog_obj.set_slug()
 
         for i in image_ids:
@@ -84,10 +96,14 @@ class BlogViewSet(viewsets.ModelViewSet):
 
         return Response(constants.BLOG_FORM_SUCCESS, status=status.HTTP_201_CREATED)
 
+    def update(self, request, *args, **kwargs):
+        blog_obj = self.get_object(kwargs.get('slug'))
+        if not blog_obj:
+            return Response(constants.NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
+
     def retrieve(self, request, *args, **kwargs):
-        try:
-            blog_obj = Blog.objects.get(slug__exact=kwargs.get('slug'))
-        except Blog.DoesNotExist:
+        blog_obj = self.get_object(kwargs.get('slug'))
+        if not blog_obj:
             return Response(constants.NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         return Response({"data": {"id": blog_obj.id,
