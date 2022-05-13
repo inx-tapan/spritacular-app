@@ -47,7 +47,8 @@ class BlogViewSet(viewsets.ModelViewSet):
                 "content": i.content,
                 "thumbnail_image": i.thumbnail_image.url,
                 "category_id": i.category.id,
-                "category_name": i.category.title
+                "category_name": i.category.title,
+                "slug": i.slug
             }
 
             blog_data.append(record)
@@ -64,7 +65,7 @@ class BlogViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Category not selected.', 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
 
         data = {
-            'article_type': 1 if request.data.get('article_type') not in [1, 2] else request.data.get('article_type'),
+            'article_type': 1 if int(request.data.get('article_type')) not in [1, 2] else int(request.data.get('article_type')),
             'thumbnail_image': request.data.get('thumbnail_image'),
             'user': request.user,
             'title': request.data.get('title'),
@@ -72,7 +73,7 @@ class BlogViewSet(viewsets.ModelViewSet):
             'description': request.data.get('description')
         }
         category = request.data.get('category')
-        image_ids_data = request.data.get('image_ids') or []
+        image_ids_data = request.data.get('image_ids') or '[]'
         image_ids = json.loads(image_ids_data)
 
         blog_obj = Blog.objects.create(**data, category_id=category)
@@ -85,7 +86,7 @@ class BlogViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         try:
-            blog_obj = Blog.objects.get(pk=kwargs.get('pk'))
+            blog_obj = Blog.objects.get(slug__exact=kwargs.get('slug'))
         except Blog.DoesNotExist:
             return Response(constants.NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 

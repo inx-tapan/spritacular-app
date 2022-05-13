@@ -7,7 +7,7 @@ urlpatterns = [
     # Create Blog
     path('create_blog/', BlogViewSet.as_view({'post': 'create', 'get': 'retrieve'}), name='blog'),
     # Get Blog details
-    path('get_blog/<int:pk>/', BlogViewSet.as_view({'get': 'retrieve'}), name='get_blog'),
+    path('get_blog/<slug:slug>/', BlogViewSet.as_view({'get': 'retrieve'}), name='get_blog'),
     # Get list of all blogs
     path('get_all_blog/<int:type>/', BlogViewSet.as_view({'get': 'list'}), name='get_all_blog'),
     # Upload Image
