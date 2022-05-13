@@ -61,7 +61,7 @@ class BlogViewSet(viewsets.ModelViewSet):
         if not request.data.get('thumbnail_image'):
             return Response({'detail': 'Thumbnail image not provided.', 'status': 0},
                             status=status.HTTP_400_BAD_REQUEST)
-        if not request.data.get('category'):
+        if int(request.data.get('article_type')) == 1 and not request.data.get('category'):
             return Response({'detail': 'Category not selected.', 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
 
         data = {
@@ -72,7 +72,7 @@ class BlogViewSet(viewsets.ModelViewSet):
             'content': request.data.get('content'),
             'description': request.data.get('description')
         }
-        category = request.data.get('category')
+        category = request.data.get('category', None)
         image_ids_data = request.data.get('image_ids') or '[]'
         image_ids = json.loads(image_ids_data)
 

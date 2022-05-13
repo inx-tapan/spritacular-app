@@ -25,7 +25,7 @@ class Blog(BaseModel):
 
     thumbnail_image = models.ImageField(upload_to='blog/thumbnail_image')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    category = models.ForeignKey(BlogCategory, on_delete=models.CASCADE)
+    category = models.ForeignKey(BlogCategory, on_delete=models.CASCADE, null=True, blank=True)
     title = models.TextField(default='')
     description = models.TextField(default='')
     content = models.TextField(default='')
