@@ -46,7 +46,7 @@ services:
     restart: always
     build:
       context: .
-    command: celery -A spritacular worker -l info
+    command: celery -A spritacular worker --beat -l info
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
