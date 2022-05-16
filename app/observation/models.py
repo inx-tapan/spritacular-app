@@ -2,6 +2,8 @@ import datetime
 
 import pytz
 from django.db import models
+from django.dispatch import receiver
+
 from users.models import User, CameraSetting, BaseModel
 
 
@@ -130,3 +132,11 @@ class ObservationComment(BaseModel):
 
     class Meta:
         db_table = 'observation_comment'
+
+
+@receiver(models.signals.post_delete, sender=ObservationImageMapping)
+def remove_file_from_s3(sender, instance, using, **kwargs):
+    instance.image.delete(save=False)
+    print("Observation image s3 file deleted")
+    instance.compressed_image.delete(save=False)
+    print("Observation compressed_image s3 file deleted")
