@@ -1,6 +1,7 @@
 import constants
 import json
 
+from django.core.cache import cache
 from rest_framework.permissions import IsAuthenticated
 from users.permissions import IsAdmin
 from rest_framework import status, viewsets
@@ -39,9 +40,15 @@ class BlogViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         blog_data = []
+        is_blog = False
         if kwargs.get('type') == 2:
+            if cache.get('tutorial_list_query_set'):
+                return Response({'data': cache.get('tutorial_list_query_set')}, status=status.HTTP_200_OK)
             query_set = Blog.objects.filter(article_type=Blog.TUTORIAL)
         else:
+            if cache.get('blog_list_query_set'):
+                return Response({'data': cache.get('blog_list_query_set')}, status=status.HTTP_200_OK)
+            is_blog = True
             query_set = Blog.objects.filter(article_type=Blog.BLOG)
 
         for i in query_set:
@@ -58,6 +65,11 @@ class BlogViewSet(viewsets.ModelViewSet):
             }
 
             blog_data.append(record)
+
+        if is_blog:
+            cache.set('blog_list_query_set', blog_data)
+        else:
+            cache.set('tutorial_list_query_set', blog_data)
 
         return Response({'data': blog_data}, status=status.HTTP_200_OK)
 
