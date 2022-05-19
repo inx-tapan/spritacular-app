@@ -43,6 +43,7 @@ class QuizQuestionMapping(models.Model):
 class QuizAttempt(BaseModel):
     quiz_question = models.ForeignKey(QuizQuestionMapping, on_delete=models.CASCADE)
     answer = models.ManyToManyField(QuizOption)
+    question_data = models.JSONField(default=dict)
     score = models.FloatField(default=0)
 
     def __str__(self):

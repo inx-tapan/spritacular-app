@@ -1,6 +1,3 @@
-import uuid
-
-from django.core.files.storage import FileSystemStorage
 from django.core.validators import FileExtensionValidator
 from rest_framework import serializers
 from PIL import Image
