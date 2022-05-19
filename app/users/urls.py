@@ -16,7 +16,7 @@ urlpatterns = [
     path('token/', CustomObtainTokenPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     # SignUp
-    path('register/', UserRegisterViewSet.as_view({'post': 'create'})),
+    path('register/', UserRegisterViewSet.as_view({'post': 'create'}), name='register'),
     # User profile image upload or profile update
 
     path('user_profile/<int:pk>/',
