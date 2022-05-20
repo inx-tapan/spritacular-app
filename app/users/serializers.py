@@ -126,7 +126,6 @@ class ChangePasswordSerializer(serializers.Serializer):
     #     return value
 
     def validate(self, validate_data):
-        print(f"validate: {validate_data}")
         old_password = validate_data['old_password']
         new_password = validate_data['new_password']
         confirm_password = validate_data['confirm_password']
