@@ -18,3 +18,5 @@ app/fcm-spritacular.json
 app/celerybeat-schedule
 
 app/quiz_data.xlsx
+
+app/test.jpg
