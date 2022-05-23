@@ -132,7 +132,7 @@ class QuizViewSet(viewsets.ModelViewSet):
                 quiz_obj.result = {'percentage': get_final_result}
                 quiz_obj.save()
 
-            return Response({'success': 'Quiz submitted successfully', 'score': f'{get_final_result}',
+            return Response({'success': 'Quiz submitted successfully', 'score': get_final_result,
                              'status': 1}, status=status.HTTP_201_CREATED)
 
         except ValidationError as e:
