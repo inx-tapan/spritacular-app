@@ -9,8 +9,17 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from users.models import User
-from .models import QuizOption, Question, Quiz, QuizQuestionMapping, QuizAttempt, UserQuizMapping
+from .models import QuizOption, Question, Quiz, QuizQuestionMapping, QuizAttempt, UserQuizMapping, Configuration
 from .serializers import QuizSerializer, QuizQuestionMappingSerializer, QuizAttemptSerializer, UserQuizMappingSerializer
+
+
+def get_total_quiz_questions():
+    config_obj = Configuration.objects.filter(key='TOTAL_QUIZ_QUESTIONS').last()
+    total_questions = 15
+    if config_obj:
+        total_questions = config_obj.value.get('total_quiz_questions')
+
+    return total_questions
 
 
 class GetQuizQuestionsViewSet(APIView):
@@ -18,7 +27,8 @@ class GetQuizQuestionsViewSet(APIView):
 
     def get(self, request, *args, **kwargs):
         question_list = list(Question.objects.all())
-        random_question_list = random.sample(question_list, 15)
+        total_questions = get_total_quiz_questions()
+        random_question_list = random.sample(question_list, total_questions)
 
         question_data = []
         for i in random_question_list:
@@ -58,23 +68,24 @@ class QuizViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         data = request.data
+        total_questions = get_total_quiz_questions()
         # data = [
         #     {
         #         "question": 2,
-        #         "answer": [1]
+        #         "answers": [1]
         #     },
         #     {
         #         "question": 3,
-        #         "answer": [3, 4]
+        #         "answers": [3, 4]
         #     },
         #     {
         #         "question": 30,
-        #         "answer": [1]
+        #         "answers": [1]
         #     }
         # ]
         error_message = None
         # answers = data.get('answers')
-        if len(data) != 15:
+        if len(data) != total_questions:
             return Response({'details': '15 questions not available.', 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
@@ -111,7 +122,7 @@ class QuizViewSet(viewsets.ModelViewSet):
                 print("**** Success!! ****")
 
                 aggregate_score = QuizAttempt.objects.filter(quiz_question__quiz=quiz_obj).aggregate(Sum('score'))
-                get_final_result = (aggregate_score.get('score__sum')/15) * 100
+                get_final_result = (aggregate_score.get('score__sum')/total_questions) * 100
                 if get_final_result > 75:
                     # Making user trained
                     user_obj = User.objects.get(id=request.user.id)
