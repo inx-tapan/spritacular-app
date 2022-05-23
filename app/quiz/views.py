@@ -74,8 +74,8 @@ class QuizViewSet(viewsets.ModelViewSet):
         # ]
         error_message = None
         # answers = data.get('answers')
-        # if len(data) != 15:
-        #     return Response({'details': '15 questions not available.', 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
+        if len(data) != 15:
+            return Response({'details': '15 questions not available.', 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             with transaction.atomic():
