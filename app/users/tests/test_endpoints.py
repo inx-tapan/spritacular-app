@@ -1,36 +1,12 @@
-import io
-
 import constants
-from .test_setup import TestSetUp
+
 from django.urls import reverse
-from PIL import Image
 from django_rest_passwordreset.models import ResetPasswordToken
+
+from .test_setup import TestSetUp
 
 
 class TestEndPoints(TestSetUp):
-
-    def generate_photo_file(self):
-        """
-        Generate temporary image object for image and file fields.
-        """
-        file = io.BytesIO()
-        image = Image.new('RGBA', size=(100, 100), color=(155, 0, 0))
-        image.save(file, format='png')
-        file.name = 'test.png'
-        file.seek(0)
-
-        return file
-
-    def get_logged_in_user(self):
-        """
-        Get logged in user.
-        """
-        self.client.post(self.register_url, self.user_data, format='json')
-        login_response = self.client.post(self.login_url, self.user_data, format='json')
-        # set bearer token for authentication
-        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + login_response.data.get('access'))
-
-        return login_response.data.get('id')
 
     def test_user_can_unsuccessfully_register(self):
         """

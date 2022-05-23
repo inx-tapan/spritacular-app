@@ -1,7 +1,14 @@
+import io
+
+from PIL import Image
 from rest_framework.test import APITestCase, APIClient
 from django.urls import reverse
+from django.test import override_settings
+
+from observation.models import Category
 
 
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 class TestSetUp(APITestCase):
 
     def setUp(self):
@@ -55,7 +62,76 @@ class TestSetUp(APITestCase):
             "question_field_two": "Polarizing Filter"
         }
 
+        self.observation_data = {
+            "image_0": self.generate_photo_file(),
+            "data": """{
+                "image_type": 1,
+                "map_data": [
+                    {
+                        "image_id": 0,
+                        "image": "",
+                        "category_map": {"category": [1]},
+                        "location": "l1",
+                        "place_uid": "askhdjashkjdashkjas",
+                        "country_code": "US",
+                        "longitude": "40.123",
+                        "latitude": "44.123",
+                        "obs_date": "2022-02-25",
+                        "obs_time": "13:00:00",
+                        "timezone": "Africa/Lagos",
+                        "azimuth": "120",
+                        "is_precise_azimuth": 0
+                    }
+                ],
+                "camera": {
+                    "observation_settings": "True",
+                    "camera_type": "Sony",
+                    "iso": "",
+                    "shutter_speed": "",
+                    "fps": "",
+                    "lens_type": "prime",
+                    "focal_length": "35",
+                    "aperture": 1.4,
+                    "question_field_one": "",
+                    "question_field_two": ""
+                },
+                "elavation_angle": 20,
+                "video_url": "https://youtube-observationurl.com",
+                "story": "user experience..."
+            }"""
+        }
+
+        self.generate_observation_category_data()
+
         return super().setUp()
+
+    def generate_photo_file(self):
+        """
+        Generate temporary image object for image and file fields.
+        """
+        file = io.BytesIO()
+        image = Image.new('RGBA', size=(100, 100), color=(155, 0, 0))
+        image.save(file, format='png')
+        file.name = 'test.png'
+        file.seek(0)
+
+        return file
+
+    def get_logged_in_user(self):
+        """
+        Get logged in user.
+        """
+        self.client.post(self.register_url, self.user_data, format='json')
+        login_response = self.client.post(self.login_url, self.user_data, format='json')
+        # set bearer token for authentication
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + login_response.data.get('access'))
+
+        return login_response.data.get('id')
+
+    def generate_observation_category_data(self):
+        data = ["Sprite", "Blue Jet", "Elve", "Halo", "Gigantic Jet", "Secondary Jet"]
+        for i in data:
+            Category.objects.create(title=i, is_default=True)
 
     def tearDown(self):
         return super().tearDown()

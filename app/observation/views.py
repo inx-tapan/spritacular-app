@@ -19,6 +19,7 @@ from constants import NOT_FOUND, OBS_FORM_SUCCESS, SOMETHING_WENT_WRONG
 from rest_framework.pagination import PageNumberPagination
 import pandas as pd
 
+
 class ImageMetadataViewSet(APIView):
     serializer_class = ImageMetadataSerializer
 
@@ -431,28 +432,28 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         data = request.data
 
         filters = Q(is_submit=True)
-        if query_data.get('country'):
-            filters = filters & Q(observationimagemapping__country_code__iexact=query_data.get('country'))
-        if query_data.get('category'):
-            filters = filters & Q(observationcategorymapping__category__title__iexact=query_data.get('category'))
-        if query_data.get('status') == 'verified':
-            filters = filters & Q(is_verified=True)
-        if query_data.get('status') == 'unverified':
-            filters = filters & Q(is_verified=False)
         if data.get('from_obs_data'):
             date_time_obj = datetime.datetime.strptime(data.get('from_obs_data'), "%d/%m/%Y %H:%M")
             filters = filters & Q(observationimagemapping__obs_date_time_as_per_utc__gte=date_time_obj)
         if data.get('to_obs_data'):
             date_time_obj = datetime.datetime.strptime(data.get('to_obs_data'), "%d/%m/%Y %H:%M")
             filters = filters & Q(observationimagemapping__obs_date_time_as_per_utc__lte=date_time_obj)
+        if query_data.get('country'):
+            filters = filters & Q(observationimagemapping__country_code__iexact=query_data.get('country'))
+        if query_data.get('status') == 'verified':
+            filters = filters & Q(is_verified=True)
+        if query_data.get('status') == 'unverified':
+            filters = filters & Q(is_verified=False)
+        if query_data.get('category'):
+            filters = filters & Q(observationcategorymapping__category__title__iexact=query_data.get('category'))
         if data.get('camera_type'):
             filters = filters & Q(camera__camera_type__iexact=data.get('camera_type'))
         if data.get('fps'):
             filters = filters & Q(camera__fps__iexact=data.get('fps'))
         if data.get('iso'):
             filters = filters & Q(camera__iso__iexact=data.get('iso'))
-        if data.get('fov'):
-            filters = filters & Q()
+        # if data.get('fov'):
+        #     filters = filters & Q()
         if data.get('shutter_speed'):
             filters = filters & Q(camera__shutter_speed__iexact=data.get('shutter_speed'))
 
