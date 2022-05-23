@@ -11,7 +11,15 @@ from observation.models import Category
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 class TestSetUp(APITestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        data = ["Sprite", "Blue Jet", "Elve", "Halo", "Gigantic Jet", "Secondary Jet"]
+        for i in data:
+            Category.objects.create(title=i, is_default=True)
+        return super(TestSetUp, cls).setUpClass()
+
     def setUp(self):
+        super().setUp()
         self.client = APIClient()
         self.login_url = reverse('token_obtain_pair')
         self.register_url = reverse('register')
@@ -62,9 +70,7 @@ class TestSetUp(APITestCase):
             "question_field_two": "Polarizing Filter"
         }
 
-        self.observation_data = {
-            "image_0": self.generate_photo_file(),
-            "data": """{
+        self.observation_data = {"image_0": self.generate_photo_file(), "data": """{
                 "image_type": 1,
                 "map_data": [
                     {
@@ -95,15 +101,256 @@ class TestSetUp(APITestCase):
                     "question_field_one": "",
                     "question_field_two": ""
                 },
-                "elavation_angle": 20,
+                "elevation_angle": 20,
                 "video_url": "https://youtube-observationurl.com",
                 "story": "user experience..."
-            }"""
-        }
-
-        self.generate_observation_category_data()
-
-        return super().setUp()
+            }"""}
+        self.draft_observation_data = {"image_0": self.generate_photo_file(), "data": """{
+                "is_draft": "True",
+                "image_type": 1,
+                "map_data": [
+                    {
+                        "image_id": 0,
+                        "image": "",
+                        "category_map": {"category": [1]},
+                        "location": "",
+                        "place_uid": "",
+                        "country_code": "",
+                        "longitude": "",
+                        "latitude": "",
+                        "obs_date": null,
+                        "obs_time": null,
+                        "timezone": "",
+                        "azimuth": "",
+                        "is_precise_azimuth": 0
+                    }
+                ],
+                "camera": {
+                    "observation_settings": "True",
+                    "camera_type": "Sony",
+                    "iso": "",
+                    "shutter_speed": "",
+                    "fps": "",
+                    "lens_type": "prime",
+                    "focal_length": "35",
+                    "aperture": 1.4,
+                    "question_field_one": "",
+                    "question_field_two": ""
+                },
+                "elevation_angle": 20,
+                "video_url": "https://youtube-observationurl.com",
+                "story": "user experience..."
+            }"""}
+        self.multiple_image_observation_data = {"image_0": self.generate_photo_file(), "image_1": self.generate_photo_file(), "image_2": self.generate_photo_file(), "data": """{
+                        "image_type": 2,
+                        "map_data": [
+                            {
+                                "image_id": 0,
+                                "image": "",
+                                "category_map": {"category": [1]},
+                                "location": "l1",
+                                "place_uid": "askhdjashkjdashkjas",
+                                "country_code": "US",
+                                "longitude": "40.123",
+                                "latitude": "44.123",
+                                "obs_date": "2022-02-25",
+                                "obs_time": "13:00:00",
+                                "timezone": "Africa/Lagos",
+                                "azimuth": "120",
+                                "is_precise_azimuth": 0
+                            },
+                            {
+                                "image_id": 1,
+                                "image": "",
+                                "category_map": {"category": [2]},
+                                "location": "l1",
+                                "place_uid": "askhdjashkjdashkjas",
+                                "country_code": "US",
+                                "longitude": "40.123",
+                                "latitude": "44.123",
+                                "obs_date": "2022-02-25",
+                                "obs_time": "13:00:00",
+                                "timezone": "Africa/Lagos",
+                                "azimuth": "120",
+                                "is_precise_azimuth": 0
+                            },
+                            {
+                                "image_id": 2,
+                                "image": "",
+                                "category_map": {"category": [3]},
+                                "location": "l1",
+                                "place_uid": "askhdjashkjdashkjas",
+                                "country_code": "US",
+                                "longitude": "40.123",
+                                "latitude": "44.123",
+                                "obs_date": "2022-02-25",
+                                "obs_time": "13:00:00",
+                                "timezone": "Africa/Lagos",
+                                "azimuth": "120",
+                                "is_precise_azimuth": 0
+                            }
+                        ],
+                        "camera": {
+                            "observation_settings": "True",
+                            "camera_type": "Sony",
+                            "iso": "",
+                            "shutter_speed": "",
+                            "fps": "",
+                            "lens_type": "prime",
+                            "focal_length": "35",
+                            "aperture": 1.4,
+                            "question_field_one": "",
+                            "question_field_two": ""
+                        },
+                        "elevation_angle": 20,
+                        "video_url": "https://youtube-observationurl.com",
+                        "story": "user experience..."
+            }"""}
+        self.invalid_single_image_observation_data = {"image_0": self.generate_photo_file(), "image_1": self.generate_photo_file(), "image_2": self.generate_photo_file(), "data": """{
+                    "image_type": 1,
+                    "map_data": [
+                        {
+                            "image_id": 0,
+                            "image": "",
+                            "category_map": {"category": [1]},
+                            "location": "l1",
+                            "place_uid": "askhdjashkjdashkjas",
+                            "country_code": "US",
+                            "longitude": "40.123",
+                            "latitude": "44.123",
+                            "obs_date": "2022-02-25",
+                            "obs_time": "13:00:00",
+                            "timezone": "Africa/Lagos",
+                            "azimuth": "120",
+                            "is_precise_azimuth": 0
+                        },
+                        {
+                            "image_id": 1,
+                            "image": "",
+                            "category_map": {"category": [2]},
+                            "location": "l1",
+                            "place_uid": "askhdjashkjdashkjas",
+                            "country_code": "US",
+                            "longitude": "40.123",
+                            "latitude": "44.123",
+                            "obs_date": "2022-02-25",
+                            "obs_time": "13:00:00",
+                            "timezone": "Africa/Lagos",
+                            "azimuth": "120",
+                            "is_precise_azimuth": 0
+                        },
+                        {
+                            "image_id": 2,
+                            "image": "",
+                            "category_map": {"category": [3]},
+                            "location": "l1",
+                            "place_uid": "askhdjashkjdashkjas",
+                            "country_code": "US",
+                            "longitude": "40.123",
+                            "latitude": "44.123",
+                            "obs_date": "2022-02-25",
+                            "obs_time": "13:00:00",
+                            "timezone": "Africa/Lagos",
+                            "azimuth": "120",
+                            "is_precise_azimuth": 0
+                        }
+                    ],
+                    "camera": {
+                        "observation_settings": "True",
+                        "camera_type": "Sony",
+                        "iso": "",
+                        "shutter_speed": "",
+                        "fps": "",
+                        "lens_type": "prime",
+                        "focal_length": "35",
+                        "aperture": 1.4,
+                        "question_field_one": "",
+                        "question_field_two": ""
+                    },
+                    "elevation_angle": 20,
+                    "video_url": "https://youtube-observationurl.com",
+                    "story": "user experience..."
+            }"""}
+        self.invalid_multiple_image_observation_data = {"image_0": self.generate_photo_file(), "image_1": self.generate_photo_file(), "image_2": self.generate_photo_file(), "image_3": self.generate_photo_file(), "data": """{
+                                "image_type": 2,
+                                "map_data": [
+                                    {
+                                        "image_id": 0,
+                                        "image": "",
+                                        "category_map": {"category": [1]},
+                                        "location": "l1",
+                                        "place_uid": "askhdjashkjdashkjas",
+                                        "country_code": "US",
+                                        "longitude": "40.123",
+                                        "latitude": "44.123",
+                                        "obs_date": "2022-02-25",
+                                        "obs_time": "13:00:00",
+                                        "timezone": "Africa/Lagos",
+                                        "azimuth": "120",
+                                        "is_precise_azimuth": 0
+                                    },
+                                    {
+                                        "image_id": 1,
+                                        "image": "",
+                                        "category_map": {"category": [2]},
+                                        "location": "l1",
+                                        "place_uid": "askhdjashkjdashkjas",
+                                        "country_code": "US",
+                                        "longitude": "40.123",
+                                        "latitude": "44.123",
+                                        "obs_date": "2022-02-25",
+                                        "obs_time": "13:00:00",
+                                        "timezone": "Africa/Lagos",
+                                        "azimuth": "120",
+                                        "is_precise_azimuth": 0
+                                    },
+                                    {
+                                        "image_id": 2,
+                                        "image": "",
+                                        "category_map": {"category": [3]},
+                                        "location": "l1",
+                                        "place_uid": "askhdjashkjdashkjas",
+                                        "country_code": "US",
+                                        "longitude": "40.123",
+                                        "latitude": "44.123",
+                                        "obs_date": "2022-02-25",
+                                        "obs_time": "13:00:00",
+                                        "timezone": "Africa/Lagos",
+                                        "azimuth": "120",
+                                        "is_precise_azimuth": 0
+                                    },
+                                    {
+                                        "image_id": 3,
+                                        "image": "",
+                                        "category_map": {"category": [3]},
+                                        "location": "l1",
+                                        "place_uid": "askhdjashkjdashkjas",
+                                        "country_code": "US",
+                                        "longitude": "40.123",
+                                        "latitude": "44.123",
+                                        "obs_date": "2022-02-25",
+                                        "obs_time": "13:00:00",
+                                        "timezone": "Africa/Lagos",
+                                        "azimuth": "120",
+                                        "is_precise_azimuth": 0
+                                    }
+                                ],
+                                "camera": {
+                                    "observation_settings": "True",
+                                    "camera_type": "Sony",
+                                    "iso": "",
+                                    "shutter_speed": "",
+                                    "fps": "",
+                                    "lens_type": "prime",
+                                    "focal_length": "35",
+                                    "aperture": 1.4,
+                                    "question_field_one": "",
+                                    "question_field_two": ""
+                                },
+                                "elevation_angle": 20,
+                                "video_url": "https://youtube-observationurl.com",
+                                "story": "user experience..."
+                    }"""}
 
     def generate_photo_file(self):
         """
@@ -127,11 +374,6 @@ class TestSetUp(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + login_response.data.get('access'))
 
         return login_response.data.get('id')
-
-    def generate_observation_category_data(self):
-        data = ["Sprite", "Blue Jet", "Elve", "Halo", "Gigantic Jet", "Secondary Jet"]
-        for i in data:
-            Category.objects.create(title=i, is_default=True)
 
     def tearDown(self):
         return super().tearDown()

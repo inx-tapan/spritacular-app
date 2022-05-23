@@ -71,16 +71,16 @@ class QuizViewSet(viewsets.ModelViewSet):
         total_questions = get_total_quiz_questions()
         # data = [
         #     {
-        #         "question": 2,
-        #         "answers": [1]
+        #         "que": 2,
+        #         "ans": [1]
         #     },
         #     {
-        #         "question": 3,
-        #         "answers": [3, 4]
+        #         "que": 3,
+        #         "ans": [3, 4]
         #     },
         #     {
-        #         "question": 30,
-        #         "answers": [1]
+        #         "que": 30,
+        #         "ans": [1]
         #     }
         # ]
         error_message = None
@@ -97,19 +97,19 @@ class QuizViewSet(viewsets.ModelViewSet):
 
                 for ques in data:
                     serializer = QuizQuestionMappingSerializer(data={'quiz': quiz_obj.id,
-                                                                     'question': ques.get('question')})
+                                                                     'question': ques.get('que')})
                     serializer.is_valid(raise_exception=True)
                     quiz_question_obj = serializer.save()
                     # ques_ans = answers[i]
-                    ques_ans = ques.get('answers')
+                    ques_ans = ques.get('ans')
                     if not ques_ans:
-                        error_message = f"No option selected for question => {ques.get('question')}"
+                        error_message = f"No option selected for question => {ques.get('que')}"
                         raise ValidationError()
 
                     # Check if the answers are correct or incorrect.
-                    score, correct_ans = self.check_answer(ques.get('question'), ques_ans)
+                    score, correct_ans = self.check_answer(ques.get('que'), ques_ans)
                     quiz_attempt = QuizAttemptSerializer(data={'quiz_question': quiz_question_obj.id,
-                                                               'answer': ques.get('answers'),
+                                                               'answer': ques.get('ans'),
                                                                'score': score,
                                                                'question_data': {"correct_ans": correct_ans}})
 
