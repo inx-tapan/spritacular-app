@@ -37,13 +37,25 @@ class TestEndPoints(TestSetUp):
     #     self.assertEqual(response.data[0], constants.MULTIPLE_IMAGE_VALID)
     #     self.assertEqual(response.status_code, 400)
 
-    def test_user_save_as_draft_observation_upload(self):
+    # def test_user_save_as_draft_observation_upload(self):
+    #     """
+    #     user successful save observation as draft
+    #     """
+    #     user_id = self.get_logged_in_user()
+    #     response = self.client.post(reverse('upload_observation'), self.draft_observation_data, format='multipart')
+    #     self.assertEqual(response.status_code, 201)
+
+    def test_user_draft_observation_to_submit(self):
         """
-        user successful save observation as draft
+        user successful submit draft observation
         """
         user_id = self.get_logged_in_user()
-        response = self.client.post(reverse('upload_observation'), self.draft_observation_data, format='multipart')
-        print(response.data)
+        draft_response = self.client.post(reverse('upload_observation'), self.draft_observation_data,
+                                          format='multipart')
+        self.assertEqual(draft_response.status_code, 201)
+        submit_response = self.client.post(reverse('upload_observation'), self.observation_data, format='multipart')
+        self.assertEqual(submit_response.status_code, 201)
+
 
 
 
