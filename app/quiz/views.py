@@ -7,6 +7,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from users.models import User
 from .models import QuizOption, Question, Quiz, QuizQuestionMapping, QuizAttempt, UserQuizMapping
 from .serializers import QuizSerializer, QuizQuestionMappingSerializer, QuizAttemptSerializer, UserQuizMappingSerializer
 
@@ -42,7 +44,7 @@ class GetQuizQuestionsViewSet(APIView):
 
 
 class QuizViewSet(viewsets.ModelViewSet):
-    # permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
     serializer_class = QuizSerializer
 
     @staticmethod
@@ -56,14 +58,24 @@ class QuizViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         data = request.data
-        # data = {
-        #     'answers': {2: [1], 3: [3, 4], 30: [1]},
-        #     'user': 109
-        # }
+        # data = [
+        #     {
+        #         "question": 2,
+        #         "answer": [1]
+        #     },
+        #     {
+        #         "question": 3,
+        #         "answer": [3, 4]
+        #     },
+        #     {
+        #         "question": 30,
+        #         "answer": [1]
+        #     }
+        # ]
         error_message = None
-        answers = data.get('answers')
-        if len(answers) != 15:
-            return Response({'details': '15 questions not available.', 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
+        # answers = data.get('answers')
+        # if len(data) != 15:
+        #     return Response({'details': '15 questions not available.', 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             with transaction.atomic():
@@ -72,32 +84,40 @@ class QuizViewSet(viewsets.ModelViewSet):
                 quiz_obj = serializer.save()
                 print("QUIZ CREATED")
 
-                for i in answers:
-                    serializer = QuizQuestionMappingSerializer(data={'quiz': quiz_obj.id, 'question': i})
+                for ques in data:
+                    serializer = QuizQuestionMappingSerializer(data={'quiz': quiz_obj.id,
+                                                                     'question': ques.get('question')})
                     serializer.is_valid(raise_exception=True)
                     quiz_question_obj = serializer.save()
-                    ques_ans = answers[i]
+                    # ques_ans = answers[i]
+                    ques_ans = ques.get('answers')
                     if not ques_ans:
-                        error_message = f'No option selected for question => {i}'
+                        error_message = f"No option selected for question => {ques.get('question')}"
                         raise ValidationError()
 
                     # Check if the answers are correct or incorrect.
-                    score, correct_ans = self.check_answer(i, ques_ans)
+                    score, correct_ans = self.check_answer(ques.get('question'), ques_ans)
                     quiz_attempt = QuizAttemptSerializer(data={'quiz_question': quiz_question_obj.id,
-                                                               'answer': answers[i],
+                                                               'answer': ques.get('answers'),
                                                                'score': score,
                                                                'question_data': {"correct_ans": correct_ans}})
 
                     quiz_attempt.is_valid(raise_exception=True)
                     quiz_attempt.save()
 
-                serializer = UserQuizMappingSerializer(data={'user': data.get('user'), 'quiz': quiz_obj.id})
+                serializer = UserQuizMappingSerializer(data={'user': request.user.id, 'quiz': quiz_obj.id})
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
                 print("**** Success!! ****")
 
                 aggregate_score = QuizAttempt.objects.filter(quiz_question__quiz=quiz_obj).aggregate(Sum('score'))
                 get_final_result = (aggregate_score.get('score__sum')/15) * 100
+                if get_final_result > 75:
+                    # Making user trained
+                    user_obj = User.objects.get(id=request.user.id)
+                    user_obj.is_trained = True
+                    user_obj.save(update_fields=['is_trained'])
+
                 quiz_obj.result = {'percentage': get_final_result}
                 quiz_obj.save()
 

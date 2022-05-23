@@ -2,6 +2,14 @@ from django.db import models
 from users.models import BaseModel, User
 
 
+class Configuration(models.Model):
+    key = models.CharField(max_length=256)
+    value = models.JSONField(default=dict)
+
+    def __str__(self):
+        return f"{self.key}"
+
+
 class QuizOption(models.Model):
     title = models.CharField(max_length=30, unique=True)
     is_active = models.BooleanField(default=True)
