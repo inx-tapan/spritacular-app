@@ -5,18 +5,9 @@ from rest_framework.test import APITestCase, APIClient
 from django.urls import reverse
 from django.test import override_settings
 
-from observation.models import Category
-
 
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
 class TestSetUp(APITestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        data = ["Sprite", "Blue Jet", "Elve", "Halo", "Gigantic Jet", "Secondary Jet"]
-        for i in data:
-            Category.objects.create(title=i, is_default=True)
-        return super(TestSetUp, cls).setUpClass()
 
     def setUp(self):
         super().setUp()
