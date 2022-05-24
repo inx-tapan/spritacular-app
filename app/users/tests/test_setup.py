@@ -132,7 +132,9 @@ class TestSetUp(APITestCase):
                 "video_url": "https://youtube-observationurl.com",
                 "story": "user experience..."
             }"""}
-        self.multiple_image_observation_data = {"image_0": self.generate_photo_file(), "image_1": self.generate_photo_file(), "image_2": self.generate_photo_file(), "data": """{
+        self.multiple_image_observation_data = {"image_0": self.generate_photo_file(),
+                                                "image_1": self.generate_photo_file(),
+                                                "image_2": self.generate_photo_file(), "data": """{
                         "image_type": 2,
                         "map_data": [
                             {
@@ -197,7 +199,9 @@ class TestSetUp(APITestCase):
                         "video_url": "https://youtube-observationurl.com",
                         "story": "user experience..."
             }"""}
-        self.invalid_single_image_observation_data = {"image_0": self.generate_photo_file(), "image_1": self.generate_photo_file(), "image_2": self.generate_photo_file(), "data": """{
+        self.invalid_single_image_observation_data = {"image_0": self.generate_photo_file(),
+                                                      "image_1": self.generate_photo_file(),
+                                                      "image_2": self.generate_photo_file(), "data": """{
                     "image_type": 1,
                     "map_data": [
                         {
@@ -262,7 +266,10 @@ class TestSetUp(APITestCase):
                     "video_url": "https://youtube-observationurl.com",
                     "story": "user experience..."
             }"""}
-        self.invalid_multiple_image_observation_data = {"image_0": self.generate_photo_file(), "image_1": self.generate_photo_file(), "image_2": self.generate_photo_file(), "image_3": self.generate_photo_file(), "data": """{
+        self.invalid_multiple_image_observation_data = {"image_0": self.generate_photo_file(),
+                                                        "image_1": self.generate_photo_file(),
+                                                        "image_2": self.generate_photo_file(),
+                                                        "image_3": self.generate_photo_file(), "data": """{
                                 "image_type": 2,
                                 "map_data": [
                                     {
@@ -343,6 +350,20 @@ class TestSetUp(APITestCase):
                                 "story": "user experience..."
                     }"""}
 
+        self.observation_approve_data = {
+            "name": "APPROVE",
+            "reason": ""
+        }
+
+        self.observation_reject_data = {
+            "name": "REJECT",
+            "reason": {
+                "inappropriate_image": 0,
+                "other": 1,
+                "additional_comment": "comment..."
+            }
+        }
+
     def generate_photo_file(self):
         """
         Generate temporary image object for image and file fields.
@@ -368,5 +389,3 @@ class TestSetUp(APITestCase):
 
     def tearDown(self):
         return super().tearDown()
-
-

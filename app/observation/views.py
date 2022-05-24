@@ -226,6 +226,7 @@ class ObservationLikeViewSet(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
+        get_object_or_404(Observation, pk=kwargs.get('pk'))
         data = request.data
         if data.get('is_like') == '1':
             if ObservationLike.objects.filter(observation_id=kwargs.get('pk'), user=request.user).exists():
@@ -247,6 +248,7 @@ class ObservationWatchCountViewSet(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
+        get_object_or_404(Observation, pk=kwargs.get('pk'))
         if not ObservationWatchCount.objects.filter(observation_id=kwargs.get('pk'), user=request.user).exists():
             ObservationWatchCount.objects.create(observation_id=kwargs.get('pk'), user=request.user)
 
