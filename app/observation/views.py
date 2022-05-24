@@ -188,7 +188,7 @@ class ObservationImageCheck(APIView):
         try:
             obs_obj = Observation.objects.get(pk=kwargs.get('pk'), user_id=request.user.id)
         except Observation.DoesNotExist:
-            return Response(NOT_FOUND, status=status.HTTP_200_OK)
+            return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         image_data = []
         for im in ObservationImageMapping.objects.filter(observation=obs_obj).order_by('pk'):
