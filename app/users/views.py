@@ -34,7 +34,6 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         permission_classes = []
-        print(f"ACTION {self.action}")
         if self.action in [
             'retrieve',
             'patch',
@@ -124,7 +123,6 @@ class ChangePasswordViewSet(APIView):
 
     def get(self, request, pk=None):
         user = get_object_or_404(User, pk=pk)
-        print(f"** {request.user.is_authenticated}")
         self.check_object_permissions(request, user)
         return Response(f'Change password for user: {user.first_name} {user.last_name}')
 
@@ -134,7 +132,6 @@ class ChangePasswordViewSet(APIView):
         data = request.data
         data['user'] = user
         serializer = self.serializer_class(data=data, context={"user": user})
-        print("------------")
         if serializer.is_valid():
             # request.user.auth_token.delete()
             # logout(request)
