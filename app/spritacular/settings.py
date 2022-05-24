@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'observation.apps.ObservationConfig',
     'notification.apps.NotificationConfig',
     'blog.apps.BlogConfig',
+    'quiz.apps.QuizConfig',
     'storages',
     'django_celery_beat',
 

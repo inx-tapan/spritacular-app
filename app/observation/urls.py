@@ -18,7 +18,7 @@ urlpatterns = [
     # Get observation details
     path('get_observation_details/<int:pk>/', ObservationImageCheck.as_view(), name="get_observation_details"),
     path('observation_collection/', UploadObservationViewSet.as_view({'get': 'user_observation_collection'}),
-         name="update_observation"),
+         name="user_observation_collection"),
     path('get_draft_data/<int:pk>/', UploadObservationViewSet.as_view({'get': 'retrieve'}), name="get_draft_data"),
     # Observation Comment
     path('comment/<int:pk>/', ObservationCommentViewSet.as_view({'get': 'list', 'post': 'create'}),

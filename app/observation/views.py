@@ -19,6 +19,7 @@ from constants import NOT_FOUND, OBS_FORM_SUCCESS, SOMETHING_WENT_WRONG
 from rest_framework.pagination import PageNumberPagination
 import pandas as pd
 
+
 class ImageMetadataViewSet(APIView):
     serializer_class = ImageMetadataSerializer
 
@@ -100,14 +101,6 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
             return Response(OBS_FORM_SUCCESS, status=status.HTTP_201_CREATED)
 
-        # else:
-        #     obs_context['camera_data'] = camera_data
-        #     observation_serializer = self.serializer_class(data=data, context=obs_context)
-        #     if observation_serializer.is_valid(raise_exception=True):
-        #         observation_serializer.save()
-        #
-        #     return Response(OBS_FORM_SUCCESS, status=status.HTTP_201_CREATED)
-
         return Response({'observation_errors': observation_serializer.errors,
                          'camera_errors': camera_serializer.errors, 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -130,40 +123,8 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
             # Adding is_draft for eliminating validations check.
             obs_context['is_draft'] = True
 
-        # camera_flag = isinstance(camera_data, dict)
-
-        # if (obs_obj.camera and obs_obj.camera.is_profile_camera_settings) and camera_flag:
-        #     # if the profile camera setting toggle is off.
-        #     camera_serializer = CameraSettingSerializer(data=camera_data, context=obs_context)
-        #
-        # elif (obs_obj.camera and not obs_obj.camera.is_profile_camera_settings) and camera_flag:
-        #     # if the profile camera setting toggle is off and previous object is not profile setting.
-        #     camera_serializer = CameraSettingSerializer(instance=obs_obj.camera, data=camera_data,
-        #                                                 context=obs_context)
-        #
-        # elif (obs_obj.camera and not obs_obj.camera.is_profile_camera_settings) and isinstance(camera_data, int):
-        #     # Delete the old camera setting instance.
-        #     try:
-        #         CameraSetting.objects.get(id=obs_obj.camera_id).delete()
-        #     except CameraSetting.DoesNotExist:
-        #         pass
-
         camera_serializer = CameraSettingSerializer(instance=obs_obj.camera, data=camera_data, context=obs_context)
-
         observation_serializer = self.serializer_class(instance=obs_obj, data=data, context=obs_context)
-
-        # if observation_serializer.is_valid(raise_exception=True):
-        #     if camera_flag:
-        #         camera_serializer.is_valid(raise_exception=True)
-        #         obs_obj = observation_serializer.save()
-        #         camera_obj = camera_serializer.save()
-        #         obs_obj.camera = camera_obj
-        #     else:
-        #         obs_obj = observation_serializer.save()
-        #         obs_obj.camera = camera_data
-        #     obs_obj.save()
-        #
-        #     return Response(OBS_FORM_SUCCESS, status=status.HTTP_200_OK)
 
         if observation_serializer.is_valid(raise_exception=True) and camera_serializer.is_valid(raise_exception=True):
             obs_obj = observation_serializer.save()
@@ -227,7 +188,7 @@ class ObservationImageCheck(APIView):
         try:
             obs_obj = Observation.objects.get(pk=kwargs.get('pk'), user_id=request.user.id)
         except Observation.DoesNotExist:
-            return Response(NOT_FOUND, status=status.HTTP_200_OK)
+            return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         image_data = []
         for im in ObservationImageMapping.objects.filter(observation=obs_obj).order_by('pk'):
@@ -251,19 +212,21 @@ class ObservationCommentViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         data = request.data
+        get_object_or_404(Observation, pk=kwargs.get('pk'))
         data['observation'] = kwargs.get('pk')
         serializer = self.serializer_class(data=data, context={'request': request})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            return Response({'data': serializer.data, 'status': 1}, status=status.HTTP_200_OK)
+            return Response({'data': serializer.data, 'status': 1}, status=status.HTTP_201_CREATED)
 
-        return Response({'data': serializer.data, 'status': 1}, status=status.HTTP_200_OK)
+        return Response({'detail': serializer.errors, 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ObservationLikeViewSet(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
+        get_object_or_404(Observation, pk=kwargs.get('pk'))
         data = request.data
         if data.get('is_like') == '1':
             if ObservationLike.objects.filter(observation_id=kwargs.get('pk'), user=request.user).exists():
@@ -285,6 +248,7 @@ class ObservationWatchCountViewSet(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
+        get_object_or_404(Observation, pk=kwargs.get('pk'))
         if not ObservationWatchCount.objects.filter(observation_id=kwargs.get('pk'), user=request.user).exists():
             ObservationWatchCount.objects.create(observation_id=kwargs.get('pk'), user=request.user)
 
@@ -353,7 +317,7 @@ class ObservationVoteViewSet(APIView):
         try:
             observation_obj = Observation.objects.get(id=observation_id)
         except Observation.DoesNotExist:
-            return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
+            return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         is_status_change = False
         for i in data.get('votes'):
@@ -431,28 +395,28 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         data = request.data
 
         filters = Q(is_submit=True)
-        if query_data.get('country'):
-            filters = filters & Q(observationimagemapping__country_code__iexact=query_data.get('country'))
-        if query_data.get('category'):
-            filters = filters & Q(observationcategorymapping__category__title__iexact=query_data.get('category'))
-        if query_data.get('status') == 'verified':
-            filters = filters & Q(is_verified=True)
-        if query_data.get('status') == 'unverified':
-            filters = filters & Q(is_verified=False)
         if data.get('from_obs_data'):
             date_time_obj = datetime.datetime.strptime(data.get('from_obs_data'), "%d/%m/%Y %H:%M")
             filters = filters & Q(observationimagemapping__obs_date_time_as_per_utc__gte=date_time_obj)
         if data.get('to_obs_data'):
             date_time_obj = datetime.datetime.strptime(data.get('to_obs_data'), "%d/%m/%Y %H:%M")
             filters = filters & Q(observationimagemapping__obs_date_time_as_per_utc__lte=date_time_obj)
+        if query_data.get('country'):
+            filters = filters & Q(observationimagemapping__country_code__iexact=query_data.get('country'))
+        if query_data.get('status') == 'verified':
+            filters = filters & Q(is_verified=True)
+        if query_data.get('status') == 'unverified':
+            filters = filters & Q(is_verified=False)
+        if query_data.get('category'):
+            filters = filters & Q(observationcategorymapping__category__title__iexact=query_data.get('category'))
         if data.get('camera_type'):
             filters = filters & Q(camera__camera_type__iexact=data.get('camera_type'))
         if data.get('fps'):
             filters = filters & Q(camera__fps__iexact=data.get('fps'))
         if data.get('iso'):
             filters = filters & Q(camera__iso__iexact=data.get('iso'))
-        if data.get('fov'):
-            filters = filters & Q()
+        # if data.get('fov'):
+        #     filters = filters & Q()
         if data.get('shutter_speed'):
             filters = filters & Q(camera__shutter_speed__iexact=data.get('shutter_speed'))
 
