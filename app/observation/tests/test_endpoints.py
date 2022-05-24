@@ -211,3 +211,60 @@ class TestEndPoints(TestSetUp):
         response = self.client.post(reverse('get_observation_details', kwargs={'pk': observation_id}), formmat='json')
         print(response.data)
         self.assertEqual(response.status_code, 200)
+
+    def test_observation_gallery(self):
+        """
+        test gallery api
+        """
+        user_id = self.get_logged_in_user()
+        response = self.client.get(reverse('gallery'), formmat='json')
+        self.assertEqual(response.status_code, 200)
+        user_obj = User.objects.get(id=user_id)
+        user_obj.is_superuser = True
+        user_obj.is_staff = True
+        user_obj.save(update_fields=['is_superuser', 'is_staff'])
+        response = self.client.get(reverse('gallery'), formmat='json')
+        self.assertEqual(response.status_code, 200)
+
+    def test_observation_gallery_with_params(self):
+        """
+        test gallery api with query params
+        """
+        user_id = self.get_logged_in_user()
+        print(f"{reverse('gallery')}?country=&category=&status=&page=1")
+        response = self.client.get(f"{reverse('gallery')}?country=&category=&status=&page=1", formmat='json')
+        self.assertEqual(response.status_code, 200)
+
+    def test_normal_user_observation_dashboard_access(self):
+        user_id = self.get_logged_in_user()
+        response = self.client.get(reverse('dashboard'), formmat='json')
+        self.assertEqual(response.data.get('detail'), 'You must be a admin user.')
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_user_observation_dashboard_access(self):
+        user_id = self.get_logged_in_user()
+        user_obj = User.objects.get(id=user_id)
+        user_obj.is_superuser = True
+        user_obj.is_staff = True
+        user_obj.save(update_fields=['is_superuser', 'is_staff'])
+        response = self.client.post(reverse('dashboard'), formmat='json')
+        self.assertEqual(response.status_code, 200)
+
+    def test_admin_user_observation_dashboard_access_with_query_params(self):
+        """
+        test dashboard api with query params
+        """
+        user_id = self.get_logged_in_user()
+        user_obj = User.objects.get(id=user_id)
+        user_obj.is_superuser = True
+        user_obj.is_staff = True
+        user_obj.save(update_fields=['is_superuser', 'is_staff'])
+        response = self.client.post(f"{reverse('dashboard')}?country=&category=&status=&page=1", formmat='json')
+        self.assertEqual(response.status_code, 200)
+
+    def test_category_list(self):
+        user_id = self.get_logged_in_user()
+        response = self.client.get(reverse('get_category_list'), format='json')
+        self.assertEqual(response.status_code, 200)
+
+
