@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import (ImageMetadataSerializer, ObservationSerializer, ObservationCommentSerializer)
+from .serializers import (ObservationSerializer, ObservationCommentSerializer)
 from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
 from users.permissions import IsAdminOrTrained, IsAdmin
@@ -20,15 +20,15 @@ from rest_framework.pagination import PageNumberPagination
 import pandas as pd
 
 
-class ImageMetadataViewSet(APIView):
-    serializer_class = ImageMetadataSerializer
-
-    def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            response_data = serializer.get_exif_data(serializer.validated_data)
-            return Response(json.loads(json.dumps(str(response_data))), status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+# class ImageMetadataViewSet(APIView):
+#     serializer_class = ImageMetadataSerializer
+#
+#     def post(self, request, *args, **kwargs):
+#         serializer = self.serializer_class(data=request.data)
+#         if serializer.is_valid(raise_exception=True):
+#             response_data = serializer.get_exif_data(serializer.validated_data)
+#             return Response(json.loads(json.dumps(str(response_data))), status=status.HTTP_200_OK)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
