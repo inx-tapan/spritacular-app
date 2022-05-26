@@ -61,6 +61,9 @@ INSTALLED_APPS = [
 
     # Firebase Cloud Messaging
     'fcm_django',
+
+    # query debug
+    'silk',
 ]
 
 AUTH_USER_MODEL = 'users.User'
@@ -74,6 +77,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'silk.middleware.SilkyMiddleware',
 ]
 
 # REST_FRAMEWORK = {

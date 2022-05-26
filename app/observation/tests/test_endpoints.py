@@ -86,8 +86,17 @@ class TestEndPoints(TestSetUp):
         observation_id = Observation.objects.filter().last().id
         comment_response = self.client.post(reverse('observation_comment', kwargs={'pk': observation_id}),
                                             {'text': 'hello world comment testing!'}, format='json')
-        print(comment_response.data)
         self.assertEqual(comment_response.status_code, 201)
+
+    def test_observation_comment_list(self):
+        """
+        observation comment list test
+        """
+        user_id = self.get_logged_in_user()
+        self.client.post(reverse('upload_observation'), self.observation_data, format='multipart')
+        observation_id = Observation.objects.filter().last().id
+        comment_response = self.client.get(reverse('observation_comment', kwargs={'pk': observation_id}), format='json')
+        self.assertEqual(comment_response.status_code, 200)
 
     def test_user_observation_comment_without_observation_id(self):
         """
@@ -200,6 +209,14 @@ class TestEndPoints(TestSetUp):
         user_id = self.get_logged_in_user()
         response = self.client.get(reverse('user_observation_collection'), formmat='json')
         self.assertEqual(response.status_code, 200)
+        response = self.client.get(f"{reverse('user_observation_collection')}?type=verified&page=1", formmat='json')
+        self.assertEqual(response.status_code, 200)
+        response = self.client.get(f"{reverse('user_observation_collection')}?type=unverified&page=1", formmat='json')
+        self.assertEqual(response.status_code, 200)
+        response = self.client.get(f"{reverse('user_observation_collection')}?type=denied&page=1", formmat='json')
+        self.assertEqual(response.status_code, 200)
+        response = self.client.get(f"{reverse('user_observation_collection')}?type=draft&page=1", formmat='json')
+        self.assertEqual(response.status_code, 200)
 
     def test_check_exists_observation_image(self):
         """
@@ -231,8 +248,8 @@ class TestEndPoints(TestSetUp):
         test gallery api with query params
         """
         user_id = self.get_logged_in_user()
-        print(f"{reverse('gallery')}?country=&category=&status=&page=1")
-        response = self.client.get(f"{reverse('gallery')}?country=&category=&status=&page=1", formmat='json')
+        response = self.client.get(f"{reverse('gallery')}?country=US&category=Sprite&status=unverified&page=1",
+                                   formmat='json')
         self.assertEqual(response.status_code, 200)
 
     def test_normal_user_observation_dashboard_access(self):
@@ -259,7 +276,8 @@ class TestEndPoints(TestSetUp):
         user_obj.is_superuser = True
         user_obj.is_staff = True
         user_obj.save(update_fields=['is_superuser', 'is_staff'])
-        response = self.client.post(f"{reverse('dashboard')}?country=&category=&status=&page=1", formmat='json')
+        response = self.client.post(f"{reverse('dashboard')}?country=US&category=Sprite&status=unverified&page=1",
+                                    formmat='json')
         self.assertEqual(response.status_code, 200)
 
     def test_category_list(self):
@@ -267,4 +285,79 @@ class TestEndPoints(TestSetUp):
         response = self.client.get(reverse('get_category_list'), format='json')
         self.assertEqual(response.status_code, 200)
 
+    def test_admin_user_observation_dashboard_with_payload(self):
+        """
+        test dashboard api with payload data
+        """
+        user_id = self.get_logged_in_user()
+        user_obj = User.objects.get(id=user_id)
+        user_obj.is_superuser = True
+        user_obj.is_staff = True
+        user_obj.save(update_fields=['is_superuser', 'is_staff'])
+        payload = {'from_obs_data': '01/05/2022 22:09', 'to_obs_data': '02/05/2022 22:10',
+                   'obs_start_date': '2022-05-01', 'obs_end_date': '2022-05-02', 'obs_start_time': '22:09',
+                   'obs_end_time': '22:10', 'camera_type': 'Canon', 'fps': '50 FPS', 'iso': '100', 'fov': '11 mm',
+                   'shutter_speed': '100', 'lens_type': 'Standard'}
+        response = self.client.post(f"{reverse('dashboard')}?country=US&category=Sprite&status=unverified&page=1",
+                                    data=payload, formmat='json')
+        self.assertEqual(response.status_code, 200)
 
+    def test_generate_observation_csv(self):
+        """
+        generate observation csv test
+        """
+        user_id = self.get_logged_in_user()
+        self.client.post(reverse('upload_observation'), self.observation_data, format='multipart')
+        observation_id = Observation.objects.filter().last().id
+        response = self.client.post(reverse('get_observation_csv'), {'observation_ids': [observation_id]}, format='json')
+        self.assertEqual(response.status_code, 200)
+
+    def test_trained_user_observation_vote(self):
+        """
+        observation category vote by trained user test
+        """
+        user_id = self.get_logged_in_user()
+        user_obj = User.objects.get(id=user_id)
+        user_obj.is_trained = True
+        user_obj.save(update_fields=['is_trained'])
+        self.client.post(reverse('upload_observation'), self.observation_data, format='multipart')
+        observation_id = Observation.objects.filter().last().id
+        payload = {"votes": [{"category_id": 1, "vote": 1}]}
+        response = self.client.post(reverse('observation_vote', kwargs={'pk': observation_id}), payload, format='json')
+        self.assertEqual(response.status_code, 200)
+
+    def test_admin_user_observation_vote(self):
+        """
+        observation category vote by admin user test
+        """
+        user_id = self.get_logged_in_user()
+        user_obj = User.objects.get(id=user_id)
+        user_obj.is_superuser = True
+        user_obj.is_staff = True
+        user_obj.save(update_fields=['is_superuser', 'is_staff'])
+        self.client.post(reverse('upload_observation'), self.observation_data, format='multipart')
+        observation_id = Observation.objects.filter().last().id
+        payload = {"votes": [{"category_id": 1, "vote": 1}]}
+        response = self.client.post(reverse('observation_vote', kwargs={'pk': observation_id}), payload, format='json')
+        self.assertEqual(response.status_code, 200)
+
+    def test_normal_user_observation_vote_restrictions(self):
+        """
+        test observation vote restricted to normal users
+        """
+        user_id = self.get_logged_in_user()
+        self.client.post(reverse('upload_observation'), self.observation_data, format='multipart')
+        observation_id = Observation.objects.filter().last().id
+        payload = {"votes": [{"category_id": 1, "vote": 1}]}
+        response = self.client.post(reverse('observation_vote', kwargs={'pk': observation_id}), payload, format='json')
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.data.get('detail'), 'You must be a trained or a admin user.')
+
+    def test_trained_user_invalid_observation_vote(self):
+        user_id = self.get_logged_in_user()
+        user_obj = User.objects.get(id=user_id)
+        user_obj.is_trained = True
+        user_obj.save(update_fields=['is_trained'])
+        payload = {"votes": [{"category_id": 1, "vote": 1}]}
+        response = self.client.post(reverse('observation_vote', kwargs={'pk': 100}), payload, format='json')
+        self.assertEqual(response.status_code, 404)
