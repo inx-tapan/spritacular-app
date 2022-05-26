@@ -1,5 +1,6 @@
 import os
 import sys
+import uuid
 from io import BytesIO
 
 import openpyxl
@@ -38,7 +39,7 @@ class Command(BaseCommand):
                 file_obj = InMemoryUploadedFile(
                             output,
                             'ImageField',
-                            f"{file_name.split('.')[0]}.{file_name.split('.')[-1]}",
+                            f"{uuid.uuid4()}.{file_name.split('.')[-1]}",
                             f"image/{file_name.split('.')[-1]}",
                             sys.getsizeof(output),
                             None,
