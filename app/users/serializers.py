@@ -27,21 +27,21 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise serializers.ValidationError({'detail': constants.NO_ACCOUNT}, code=401)
 
         refresh = self.get_token(self.user)
-        try:
-            camera_obj = CameraSetting.objects.get(user=self.user, is_profile_camera_settings=True)
-            camera = {
-                'camera_type': camera_obj.camera_type,
-                'iso': camera_obj.iso,
-                'shutter_speed': camera_obj.shutter_speed,
-                'fps': camera_obj.fps,
-                'lens_type': camera_obj.lens_type,
-                'focal_length': camera_obj.focal_length,
-                'aperture': camera_obj.aperture,
-                'question_field_one': camera_obj.question_field_one,
-                'question_field_two': camera_obj.question_field_two
-            }
-        except CameraSetting.DoesNotExist:
-            camera = None
+        # try:
+        #     camera_obj = CameraSetting.objects.get(user=self.user, is_profile_camera_settings=True)
+        #     camera = {
+        #         'camera_type': camera_obj.camera_type,
+        #         'iso': camera_obj.iso,
+        #         'shutter_speed': camera_obj.shutter_speed,
+        #         'fps': camera_obj.fps,
+        #         'lens_type': camera_obj.lens_type,
+        #         'focal_length': camera_obj.focal_length,
+        #         'aperture': camera_obj.aperture,
+        #         'question_field_one': camera_obj.question_field_one,
+        #         'question_field_two': camera_obj.question_field_two
+        #     }
+        # except CameraSetting.DoesNotExist:
+        #     camera = None
 
         data = {
             'refresh': str(refresh),
@@ -56,7 +56,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             'is_first_login': self.user.is_first_login,
             'profile_image': self.user.profile_image.url if self.user.profile_image else None,
             'location_metadata': self.user.location_metadata,
-            'camera': camera,
+            # 'camera': camera,
             'is_superuser': self.user.is_superuser,
             'is_trained': self.user.is_trained,
             'is_user': not self.user.is_superuser and not self.user.is_trained
@@ -166,31 +166,30 @@ class CameraSettingSerializer(serializers.ModelSerializer):
             self.fields['aperture'] = serializers.FloatField(required=True)
 
     def create(self, validated_data):
-        if not CameraSetting.objects.filter(is_profile_camera_settings=True, user=validated_data.get('user')).exists():
-            camera_type = validated_data.get('camera_type')
-            iso = validated_data.get('iso')
-            shutter_speed = validated_data.get('shutter_speed')
-            fps = validated_data.get('fps')
-            lens_type = validated_data.get('lens_type')
-            focal_length = validated_data.get('focal_length')
-            aperture = validated_data.get('aperture', None)
-            question_field_one = validated_data.get('question_field_one')
-            question_field_two = validated_data.get('question_field_two')
-            user = validated_data.get('user')
-
-            camera_setting = CameraSetting.objects.create(camera_type=camera_type, iso=iso, shutter_speed=shutter_speed,
-                                                          fps=fps, lens_type=lens_type, focal_length=focal_length,
-                                                          aperture=aperture, question_field_one=question_field_one,
-                                                          question_field_two=question_field_two, user=user)
-
-            if self.context.get('observation_settings'):
-                # For differentiating camera settings in profile and settings used in observations upload form.
-                camera_setting.is_profile_camera_settings = False
-                camera_setting.save(update_fields=['is_profile_camera_settings'])
-
-            return camera_setting
-        else:
+        if CameraSetting.objects.filter(is_profile_camera_settings=True, user=validated_data.get('user')).exists():
             raise serializers.ValidationError({'details': constants.CAMERA_SETTINGS_ALREADY_EXISTS}, code=400)
+        camera_type = validated_data.get('camera_type')
+        iso = validated_data.get('iso')
+        shutter_speed = validated_data.get('shutter_speed')
+        fps = validated_data.get('fps')
+        lens_type = validated_data.get('lens_type')
+        focal_length = validated_data.get('focal_length')
+        aperture = validated_data.get('aperture', None)
+        question_field_one = validated_data.get('question_field_one')
+        question_field_two = validated_data.get('question_field_two')
+        user = validated_data.get('user')
+
+        camera_setting = CameraSetting.objects.create(camera_type=camera_type, iso=iso, shutter_speed=shutter_speed,
+                                                      fps=fps, lens_type=lens_type, focal_length=focal_length,
+                                                      aperture=aperture, question_field_one=question_field_one,
+                                                      question_field_two=question_field_two, user=user)
+
+        if self.context.get('observation_settings'):
+            # For differentiating camera settings in profile and settings used in observations upload form.
+            camera_setting.is_profile_camera_settings = False
+            camera_setting.save(update_fields=['is_profile_camera_settings'])
+
+        return camera_setting
 
     def update(self, instance, validated_data):
         camera_type = validated_data.get('camera_type')
