@@ -1,7 +1,7 @@
 import datetime
 import json
 
-from django.db.models import Q
+from django.db.models import Q, Prefetch, OuterRef, Exists
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework.generics import ListAPIView
@@ -14,7 +14,7 @@ from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
 from users.permissions import IsAdminOrTrained, IsAdmin
 from .models import (Observation, Category, ObservationComment, ObservationLike, ObservationWatchCount,
-                     VerifyObservation, ObservationReasonForReject, ObservationImageMapping)
+                     VerifyObservation, ObservationReasonForReject, ObservationImageMapping, ObservationCategoryMapping)
 from constants import NOT_FOUND, OBS_FORM_SUCCESS, SOMETHING_WENT_WRONG
 from rest_framework.pagination import PageNumberPagination
 import pandas as pd
@@ -50,10 +50,29 @@ class HomeViewSet(ListAPIView):
     serializer_class = ObservationSerializer
 
     def get(self, request, *args, **kwargs):
-        latest_observation = Observation.objects.filter(is_verified=True,
-                                                        observationimagemapping__image__isnull=False,
-                                                        observationimagemapping__compressed_image__isnull=False
-                                                        ).order_by('-pk').distinct('pk')[:5]
+        # latest_observation = Observation.objects.filter(is_verified=True,
+        #                                                 observationimagemapping__image__isnull=False,
+        #                                                 observationimagemapping__compressed_image__isnull=False
+        #                                                 ).order_by('-pk').distinct('pk')[:4]
+
+        latest_observation = Observation.objects.filter(is_verified=True) \
+                                 .exclude(Q(observationimagemapping__image=None) |
+                                          Q(observationimagemapping__image='') |
+                                          Q(observationimagemapping__compressed_image=None) |
+                                          Q(observationimagemapping__compressed_image='')) \
+                                 .order_by('-pk').distinct('id') \
+                                 .prefetch_related('user', 'camera', 'observationimagemapping_set',
+                                                   Prefetch('observationcategorymapping_set',
+                                                            queryset=ObservationCategoryMapping.objects.prefetch_related(
+                                                                'category'))
+                                                   ,
+                                                   Prefetch('observationlike_set',
+                                                            queryset=ObservationLike.objects.all())
+                                                   ,
+                                                   Prefetch('observationwatchcount_set',
+                                                            queryset=ObservationWatchCount.objects.all())
+                                                   )[:4]
+
         observation_count = Observation.objects.filter().count()
         observation_country_count = Observation.objects.filter().distinct('observationimagemapping__country_code'
                                                                           ).count()
@@ -163,7 +182,28 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         denied_count = Observation.objects.filter(user=request.user, is_reject=True, is_submit=True).count()
         draft_count = Observation.objects.filter(user=request.user, is_submit=False).count()
 
-        observation_filter = Observation.objects.filter(filters).order_by('-pk')
+        # observation_filter = Observation.objects.filter(filters).order_by('-pk')
+
+        is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
+        is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
+        is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
+        observation_filter = Observation.objects.filter(filters). \
+            exclude(Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')) \
+            .order_by('-pk').distinct('id') \
+            .prefetch_related('user', 'camera', 'observationimagemapping_set',
+                              Prefetch('observationcategorymapping_set',
+                                       queryset=ObservationCategoryMapping.objects.prefetch_related('category'))
+                              ,
+                              Prefetch('observationlike_set',
+                                       queryset=ObservationLike.objects.all())
+                              ,
+                              Prefetch('observationwatchcount_set',
+                                       queryset=ObservationWatchCount.objects.all())
+                              ).annotate(is_like=Exists(is_like),
+                                         is_watch=Exists(is_watch),
+                                         is_voted=Exists(is_voted)
+                                         )
+
         page = self.paginate_queryset(observation_filter)
         if not page:
             serializer = self.serializer_class(observation_filter, many=True,
@@ -262,7 +302,21 @@ class ObservationGalleryViewSet(ListAPIView):
     Observation gallery page api with paginated response.
     """
     pagination_class = PageNumberPagination
-    queryset = Observation.objects.all()
+
+    def get_queryset(self):
+        return Observation.objects.all() \
+            .exclude(Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')) \
+            .order_by('-pk').distinct('id') \
+            .prefetch_related('user', 'camera', 'observationimagemapping_set',
+                              Prefetch('observationcategorymapping_set',
+                                       queryset=ObservationCategoryMapping.objects.prefetch_related('category'))
+                              ,
+                              Prefetch('observationlike_set',
+                                       queryset=ObservationLike.objects.all())
+                              ,
+                              Prefetch('observationwatchcount_set',
+                                       queryset=ObservationWatchCount.objects.all())
+                              )
 
     def get(self, request, *args, **kwargs):
         data = request.query_params
@@ -280,16 +334,30 @@ class ObservationGalleryViewSet(ListAPIView):
 
         if request.user.is_authenticated and (request.user.is_trained or request.user.is_superuser):
             # Trained user can see both verified and unverified observation on gallery screen.
-            observation_filter = Observation.objects.filter(filters).exclude(Q(observationimagemapping__image=None) |
-                                                                             Q(observationimagemapping__image='')
-                                                                             ).order_by('-pk').distinct('id')
+            is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
+            is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
+            is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
+
+            observation_filter = self.get_queryset().filter(filters).annotate(is_like=Exists(is_like),
+                                                                              is_watch=Exists(is_watch),
+                                                                              is_voted=Exists(is_voted)
+                                                                              )
+
+        elif request.user.is_authenticated:
+            # For normal users
+            is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
+            is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
+            is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
+
+            observation_filter = self.get_queryset().filter(is_submit=True, is_verified=True).annotate(
+                is_like=Exists(is_like),
+                is_watch=Exists(is_watch),
+                is_voted=Exists(is_voted)
+                )
+
         else:
-            # Unauthenticated and untrained user can see only verified observations.
-            observation_filter = Observation.objects.filter(is_submit=True,
-                                                            is_verified=True
-                                                            ).exclude(Q(observationimagemapping__image=None) |
-                                                                      Q(observationimagemapping__image='')
-                                                                      ).order_by('-pk').distinct('id')
+            # For unauthenticated users
+            observation_filter = self.get_queryset().filter(is_submit=True, is_verified=True)
 
         page = self.paginate_queryset(observation_filter)
         if not page:
@@ -377,7 +445,8 @@ class ObservationVerifyViewSet(APIView):
                 ObservationReasonForReject.objects.create(observation_id=observation_id,
                                                           inappropriate_image=reason_data.get('inappropriate_image'),
                                                           other=reason_data.get('other'),
-                                                          additional_comment=reason_data.get('additional_comment', None))
+                                                          additional_comment=reason_data.get('additional_comment',
+                                                                                             None))
 
             return Response({'success': 'Observation Rejected.'}, status=status.HTTP_200_OK)
 
@@ -420,9 +489,30 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         if data.get('shutter_speed'):
             filters = filters & Q(camera__shutter_speed__iexact=data.get('shutter_speed'))
 
-        observation_filter = Observation.objects.filter(filters).exclude(Q(observationimagemapping__image=None) |
-                                                                         Q(observationimagemapping__image='')
-                                                                         ).order_by('-pk').distinct('id')
+        # observation_filter = Observation.objects.filter(filters).exclude(Q(observationimagemapping__image=None) |
+        #                                                                  Q(observationimagemapping__image='')
+        #                                                                  ).order_by('-pk').distinct('id')
+
+        is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
+        is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
+        is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
+
+        observation_filter = Observation.objects.filter(filters). \
+            exclude(Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')) \
+            .order_by('-pk').distinct('id') \
+            .prefetch_related('user', 'camera', 'observationimagemapping_set',
+                              Prefetch('observationcategorymapping_set',
+                                       queryset=ObservationCategoryMapping.objects.prefetch_related('category'))
+                              ,
+                              Prefetch('observationlike_set',
+                                       queryset=ObservationLike.objects.all())
+                              ,
+                              Prefetch('observationwatchcount_set',
+                                       queryset=ObservationWatchCount.objects.all())
+                              ).annotate(is_like=Exists(is_like),
+                                         is_watch=Exists(is_watch),
+                                         is_voted=Exists(is_voted)
+                                         )
 
         page = self.paginate_queryset(observation_filter)
         if not page:

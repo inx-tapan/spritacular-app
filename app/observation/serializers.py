@@ -1,67 +1,63 @@
 from django.core.validators import FileExtensionValidator
 from rest_framework import serializers
-from PIL import Image
-from PIL.ExifTags import TAGS, GPSTAGS
-from .utils import dms_coordinates_to_dd_coordinates
-from .models import (ObservationImageMapping, Observation, Category, ObservationCategoryMapping, ObservationComment,
-                     ObservationLike, ObservationWatchCount, VerifyObservation)
+from .models import (ObservationImageMapping, Observation, Category, ObservationCategoryMapping, ObservationComment)
 from users.models import CameraSetting
 from users.serializers import UserRegisterSerializer, CameraSettingSerializer
 from constants import FIELD_REQUIRED, SINGLE_IMAGE_VALID, MULTIPLE_IMAGE_VALID
 from observation.tasks import get_original_image
-from spritacular.utils import compress_and_save_image_locally, compress_image
+from spritacular.utils import compress_and_save_image_locally
 
 
-class ImageMetadataSerializer(serializers.Serializer):
-    image = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'tiff', 'png', 'jpeg'])])
-
-    def get_exif_data(self, validated_data):
-        # img = Image(validated_data.get('image'))
-        # print(f"Latitude: {img.gps_latitude} {img.gps_latitude_ref}")
-        # print(f"Longitude: {img.gps_longitude} {img.gps_longitude_ref}\n")
-
-        exif = {}
-        gps = {}
-        latitude = None
-        longitude = None
-        try:
-            image = validated_data.get('image')
-            img = Image.open(image)
-            if img._getexif():
-                for tag, value in img._getexif().items():
-                    if tag in TAGS:
-                        exif[TAGS[tag]] = value
-
-            trash_data = ['MakerNote', 'UserComment', 'ImageDescription']
-
-            for i in trash_data:
-                if i in exif:
-                    exif.pop(i)
-
-            print(exif)
-
-            if 'GPSInfo' in exif:
-                for key, val in exif['GPSInfo'].items():
-                    name = GPSTAGS.get(key, key)
-                    print(f"{name}: {exif['GPSInfo'][key]}")
-                    gps[name] = val
-
-                if gps.get('GPSLatitude') and gps.get('GPSLatitudeRef'):
-                    latitude = dms_coordinates_to_dd_coordinates(gps['GPSLatitude'], gps['GPSLatitudeRef'])
-                    print(
-                        f"Latitude (DD): {dms_coordinates_to_dd_coordinates(gps['GPSLatitude'], gps['GPSLatitudeRef'])}")
-
-                if gps.get('GPSLongitude') and gps.get('GPSLongitudeRef'):
-                    longitude = dms_coordinates_to_dd_coordinates(gps['GPSLongitude'], gps['GPSLongitudeRef'])
-                    print(
-                        f"Longitude (DD): {dms_coordinates_to_dd_coordinates(gps['GPSLongitude'], gps['GPSLongitudeRef'])}\n")
-
-        except Exception as e:
-            print(f"---{e}")
-
-        return {"latitude": latitude, "longitude": longitude, "FocalLength": exif.get('FocalLength'),
-                "DateTime": exif.get('DateTime'), "ISOSpeedRatings": exif.get('ISOSpeedRatings'),
-                "ApertureValue": exif.get('ApertureValue')}
+# class ImageMetadataSerializer(serializers.Serializer):
+#     image = serializers.ImageField(validators=[FileExtensionValidator(['jpg', 'tiff', 'png', 'jpeg'])])
+#
+#     def get_exif_data(self, validated_data):
+#         # img = Image(validated_data.get('image'))
+#         # print(f"Latitude: {img.gps_latitude} {img.gps_latitude_ref}")
+#         # print(f"Longitude: {img.gps_longitude} {img.gps_longitude_ref}\n")
+#
+#         exif = {}
+#         gps = {}
+#         latitude = None
+#         longitude = None
+#         try:
+#             image = validated_data.get('image')
+#             img = Image.open(image)
+#             if img._getexif():
+#                 for tag, value in img._getexif().items():
+#                     if tag in TAGS:
+#                         exif[TAGS[tag]] = value
+#
+#             trash_data = ['MakerNote', 'UserComment', 'ImageDescription']
+#
+#             for i in trash_data:
+#                 if i in exif:
+#                     exif.pop(i)
+#
+#             print(exif)
+#
+#             if 'GPSInfo' in exif:
+#                 for key, val in exif['GPSInfo'].items():
+#                     name = GPSTAGS.get(key, key)
+#                     print(f"{name}: {exif['GPSInfo'][key]}")
+#                     gps[name] = val
+#
+#                 if gps.get('GPSLatitude') and gps.get('GPSLatitudeRef'):
+#                     latitude = dms_coordinates_to_dd_coordinates(gps['GPSLatitude'], gps['GPSLatitudeRef'])
+#                     print(
+#                         f"Latitude (DD): {dms_coordinates_to_dd_coordinates(gps['GPSLatitude'], gps['GPSLatitudeRef'])}")
+#
+#                 if gps.get('GPSLongitude') and gps.get('GPSLongitudeRef'):
+#                     longitude = dms_coordinates_to_dd_coordinates(gps['GPSLongitude'], gps['GPSLongitudeRef'])
+#                     print(
+#                         f"Longitude (DD): {dms_coordinates_to_dd_coordinates(gps['GPSLongitude'], gps['GPSLongitudeRef'])}\n")
+#
+#         except Exception as e:
+#             print(f"---{e}")
+#
+#         return {"latitude": latitude, "longitude": longitude, "FocalLength": exif.get('FocalLength'),
+#                 "DateTime": exif.get('DateTime'), "ISOSpeedRatings": exif.get('ISOSpeedRatings'),
+#                 "ApertureValue": exif.get('ApertureValue')}
 
 
 class ObservationCategorySerializer(serializers.ModelSerializer):
@@ -91,7 +87,7 @@ class ObservationImageSerializer(serializers.ModelSerializer):
 class ObservationSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     map_data = ObservationImageSerializer(many=True, write_only=True)
-    camera = serializers.PrimaryKeyRelatedField(queryset=CameraSetting.objects.all(), allow_null=True, required=False)
+    # camera = serializers.PrimaryKeyRelatedField(queryset=CameraSetting.objects.all(), allow_null=True, required=False)
     images = serializers.SerializerMethodField('get_image', read_only=True)
     user_data = serializers.SerializerMethodField('get_user', read_only=True)
     category_data = serializers.SerializerMethodField('get_category_name', read_only=True)
@@ -100,7 +96,7 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Observation
-        fields = ('id', 'user', 'image_type', 'camera', 'map_data', 'elevation_angle', 'video_url', 'story', 'images',
+        fields = ('id', 'user', 'image_type', 'map_data', 'elevation_angle', 'video_url', 'story', 'images',
                   'user_data', 'is_verified', 'category_data', 'camera_data', 'like_watch_count_data', 'is_submit',
                   'is_reject')
 
@@ -111,12 +107,11 @@ class ObservationSerializer(serializers.ModelSerializer):
     #         del self.fields['camera']
 
     def get_image(self, data):
-        obj = ObservationImageMapping.objects.filter(observation=data)
-        # for i in obj:
+        obj = data.observationimagemapping_set.all()
         serialize_data = ObservationImageSerializer(obj, many=True).data
         for i in serialize_data:
             i['category_map'] = {}
-            i['category_map']['category'] = self.get_category(data)
+            i['category_map']['category'] = [i.category.id for i in data.observationcategorymapping_set.all()]
         return serialize_data
 
     def get_user(self, data):
@@ -125,32 +120,25 @@ class ObservationSerializer(serializers.ModelSerializer):
         serializer['is_voted'] = False
         serializer['is_can_vote'] = False
         if self.context.get('request').user.is_authenticated:
-            serializer['is_voted'] = VerifyObservation.objects.filter(observation=data,
-                                                                      user=self.context.get('request').user).exists()
-            serializer['is_can_vote'] = data.user != self.context.get('request').user
+            serializer['is_voted'] = data.is_voted
+            serializer['is_can_vote'] = user != self.context.get('request').user
         return serializer
 
-    def get_category(self, data):
-        obj = ObservationCategoryMapping.objects.filter(observation=data)
-        return [i.category.id for i in obj]
-
     def get_category_name(self, data):
-        obj = ObservationCategoryMapping.objects.filter(observation=data)
+        obj = data.observationcategorymapping_set.all()
         return [{"name": i.category.title, "id": i.category.id} for i in obj]
 
     def get_camera(self, data):
         return CameraSettingSerializer(data.camera).data
 
     def get_like_watch_count_data(self, data):
-        like_count = ObservationLike.objects.filter(observation=data).count()
+        like_count = data.observationlike_set.count()
+        watch_count = data.observationwatchcount_set.count()
         is_like = None
         is_watch = None
         if self.context.get('request').user.is_authenticated:
-            is_like = ObservationLike.objects.filter(observation=data, user=self.context.get('request').user).exists()
-            is_watch = ObservationWatchCount.objects.filter(observation=data,
-                                                            user=self.context.get('request').user).exists()
-        watch_count = ObservationWatchCount.objects.filter(observation=data).count()
-
+            is_like = data.is_like
+            is_watch = data.is_watch
         return {'like_count': like_count, 'is_like': is_like, 'watch_count': watch_count, 'is_watch': is_watch}
 
     def validate(self, data):
@@ -343,7 +331,6 @@ class ObservationSerializer(serializers.ModelSerializer):
                 obs_image_map_obj.set_utc()
                 get_original_image.delay(obs_image_map_obj.id)  # Calling celery task to save original image from local.
 
-        # TODO: submit draft or update draft
         return instance
 
 
