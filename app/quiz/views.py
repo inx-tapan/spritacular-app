@@ -1,6 +1,6 @@
 import random
 
-from django.db.models import Sum
+from django.db.models import Sum, Count, Q
 from django.db import transaction
 from rest_framework import status, viewsets
 from rest_framework.exceptions import ValidationError
@@ -121,8 +121,10 @@ class QuizViewSet(viewsets.ModelViewSet):
                 serializer.save()
                 print("**** Success!! ****")
 
-                aggregate_score = QuizAttempt.objects.filter(quiz_question__quiz=quiz_obj).aggregate(Sum('score'))
-                get_final_result = (aggregate_score.get('score__sum')/total_questions) * 100
+                aggregate_score = QuizAttempt.objects.filter(quiz_question__quiz=quiz_obj)\
+                    .aggregate(total_score=Sum('score'), correct_answers=Count('score', filter=Q(score=1.0)))
+
+                get_final_result = (aggregate_score.get('total_score')/total_questions) * 100
                 if get_final_result > 75:
                     # Making user trained
                     user_obj = User.objects.get(id=request.user.id)
@@ -133,7 +135,8 @@ class QuizViewSet(viewsets.ModelViewSet):
                 quiz_obj.save()
 
             return Response({'success': 'Quiz submitted successfully', 'score': get_final_result,
-                             'status': 1}, status=status.HTTP_201_CREATED)
+                             'correct_answers': aggregate_score.get('correct_answers'), 'status': 1},
+                            status=status.HTTP_201_CREATED)
 
         except ValidationError as e:
             print(f"GOT IT----{e}")

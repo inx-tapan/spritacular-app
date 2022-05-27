@@ -1,7 +1,7 @@
 import datetime
 import json
 
-from django.db.models import Q, Prefetch, OuterRef, Exists
+from django.db.models import Q, Prefetch, OuterRef, Exists, Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework.generics import ListAPIView
@@ -73,18 +73,23 @@ class HomeViewSet(ListAPIView):
                                                             queryset=ObservationWatchCount.objects.all())
                                                    )[:4]
 
-        observation_count = Observation.objects.filter().count()
-        observation_country_count = Observation.objects.filter().distinct('observationimagemapping__country_code'
-                                                                          ).count()
-        observation_user_count = Observation.objects.filter().distinct('user_id').count()
+        observation_counts = Observation.objects.aggregate(
+            self_count=Count('pk', distinct=True),
+            country_count=Count('observationimagemapping__country_code', distinct=True),
+            user_count=Count('user', distinct=True)
+        )
+
+        # observation_count = Observation.objects.filter().count()
+        # observation_country_count = Observation.objects.distinct('observationimagemapping__country_code')
+        # observation_user_count = Observation.objects.filter().distinct('user_id').count()
 
         serializer = self.serializer_class(latest_observation, many=True,
                                            context={'user_observation_collection': True, 'request': request})
 
         return Response({'data': {'latest_observation': serializer.data,
-                                  'observation_count': observation_count,
-                                  'observation_country_count': observation_country_count,
-                                  'observation_user_count': observation_user_count}},
+                                  'observation_count': observation_counts['self_count'],
+                                  'observation_country_count': observation_counts['country_count'],
+                                  'observation_user_count': observation_counts['user_count']}},
                         status=status.HTTP_200_OK)
 
 
