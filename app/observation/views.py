@@ -2,6 +2,7 @@ import datetime
 import json
 
 import pytz
+from django.core.cache import cache
 from django.db.models import Q, Prefetch, OuterRef, Exists, Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -359,7 +360,7 @@ class ObservationGalleryViewSet(ListAPIView):
                 is_like=Exists(is_like),
                 is_watch=Exists(is_watch),
                 is_voted=Exists(is_voted)
-                )
+            )
 
         else:
             # For unauthenticated users
@@ -495,30 +496,54 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         if data.get('shutter_speed'):
             filters = filters & Q(camera__shutter_speed__iexact=data.get('shutter_speed'))
 
-        # observation_filter = Observation.objects.filter(filters).exclude(Q(observationimagemapping__image=None) |
-        #                                                                  Q(observationimagemapping__image='')
-        #                                                                  ).order_by('-pk').distinct('id')
+        # get all required ids all api calls
+        required_observation_ids = set(Observation.objects.filter(filters).only('id').exclude(
+            Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')
+        ).distinct('id').values_list('id', flat=True))
+
+        # observation_cache_diff = "required_observation_ids - cache.get('some name')"
+        observation_cache_common = []
+        if cache.get('common_observation_cache_data'):
+            print("yes")
+            observation_cache_common = list(required_observation_ids.intersection(
+                set(cache.get('common_observation_cache_data'))))
 
         is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
         is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
         is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
 
-        observation_filter = Observation.objects.filter(filters). \
-            exclude(Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')) \
-            .order_by('-pk').distinct('id') \
-            .prefetch_related('user', 'camera', 'observationimagemapping_set',
-                              Prefetch('observationcategorymapping_set',
-                                       queryset=ObservationCategoryMapping.objects.prefetch_related('category'))
-                              ,
-                              Prefetch('observationlike_set',
-                                       queryset=ObservationLike.objects.all())
-                              ,
-                              Prefetch('observationwatchcount_set',
-                                       queryset=ObservationWatchCount.objects.all())
-                              ).annotate(is_like=Exists(is_like),
-                                         is_watch=Exists(is_watch),
-                                         is_voted=Exists(is_voted)
-                                         )
+        observation_filter = list(Observation.objects.filter(filters)
+                                  .exclude(Q(id__in=observation_cache_common) |
+                                           Q(observationimagemapping__image=None) |
+                                           Q(observationimagemapping__image='')
+                                           ).order_by('-pk').distinct('id')
+                                  .prefetch_related('user', 'camera', 'observationimagemapping_set',
+                                                    Prefetch('observationcategorymapping_set',
+                                                             queryset=ObservationCategoryMapping.objects.prefetch_related(
+                                                                 'category'))
+                                                    ,
+                                                    Prefetch('observationlike_set',
+                                                             queryset=ObservationLike.objects.all())
+                                                    ,
+                                                    Prefetch('observationwatchcount_set',
+                                                             queryset=ObservationWatchCount.objects.all())
+                                                    ).annotate(is_like=Exists(is_like),
+                                                               is_watch=Exists(is_watch),
+                                                               is_voted=Exists(is_voted)
+                                                               ))
+        print(f"Original list ->{observation_filter}")
+
+        obs_cache_data = {obs_obj.id: obs_obj for obs_obj in observation_filter}
+        for i in observation_cache_common:
+            observation_filter.append(cache.get('common_observation_cache_data')[i])
+            obs_cache_data[i] = cache.get('common_observation_cache_data')[i]
+
+        print(f"{len(observation_filter)}--{len(set(observation_filter))}")
+
+        if len(observation_filter) == len(set(observation_filter)):
+            # Set cache only if the queryset full of unique instances
+            print("**cache it**")
+            cache.set('common_observation_cache_data', obs_cache_data)
 
         page = self.paginate_queryset(observation_filter)
         if not page:
