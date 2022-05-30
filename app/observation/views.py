@@ -1,6 +1,7 @@
 import datetime
 import json
 
+import pytz
 from django.db.models import Q, Prefetch, OuterRef, Exists, Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -470,10 +471,10 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
 
         filters = Q(is_submit=True)
         if data.get('from_obs_data'):
-            date_time_obj = datetime.datetime.strptime(data.get('from_obs_data'), "%d/%m/%Y %H:%M")
+            date_time_obj = pytz.utc.localize(datetime.datetime.strptime(data.get('from_obs_data'), "%d/%m/%Y %H:%M"))
             filters = filters & Q(observationimagemapping__obs_date_time_as_per_utc__gte=date_time_obj)
         if data.get('to_obs_data'):
-            date_time_obj = datetime.datetime.strptime(data.get('to_obs_data'), "%d/%m/%Y %H:%M")
+            date_time_obj = pytz.utc.localize(datetime.datetime.strptime(data.get('to_obs_data'), "%d/%m/%Y %H:%M"))
             filters = filters & Q(observationimagemapping__obs_date_time_as_per_utc__lte=date_time_obj)
         if query_data.get('country'):
             filters = filters & Q(observationimagemapping__country_code__iexact=query_data.get('country'))
