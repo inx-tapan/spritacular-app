@@ -54,11 +54,11 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def retrieve(self, request, *args, **kwargs):
-        user = get_object_or_404(User, pk=self.kwargs['pk'])
-        self.check_object_permissions(request, user)
-        serializer = self.serializer_class(user)
-        return Response(serializer.data)
+    # def retrieve(self, request, *args, **kwargs):
+    #     user = get_object_or_404(User, pk=self.kwargs['pk'])
+    #     self.check_object_permissions(request, user)
+    #     serializer = self.serializer_class(user)
+    #     return Response(serializer.data)
 
     def profile_update(self, request, pk=None):
         user = get_object_or_404(User, pk=pk)
@@ -121,11 +121,6 @@ class ChangePasswordViewSet(APIView):
     serializer_class = ChangePasswordSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
 
-    def get(self, request, pk=None):
-        user = get_object_or_404(User, pk=pk)
-        self.check_object_permissions(request, user)
-        return Response(f'Change password for user: {user.first_name} {user.last_name}')
-
     def put(self, request, pk=None):
         user = get_object_or_404(User, pk=pk)
         self.check_object_permissions(request, user)
@@ -142,24 +137,6 @@ class ChangePasswordViewSet(APIView):
             return Response({"Success": True, "message": constants.CHANGE_PASS_SUCCESS}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class LogoutViewSet(APIView):
-    """
-    Logout user viwset.
-    refresh token will be blacklisted once the user opt to logout.
-    """
-    permission_classes = (IsAuthenticated,)
-
-    def post(self, request):
-        try:
-            refresh_token = request.data["refresh_token"]
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-
-            return Response(status=status.HTTP_205_RESET_CONTENT)
-        except Exception:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 class CameraSettingsApiView(viewsets.ModelViewSet):
