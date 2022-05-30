@@ -37,10 +37,10 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         data = []
-        for i in self.queryset:
+        for tle in self.queryset:
             category_details = {
-                'id': i.pk,
-                'name': i.title
+                'id': tle.pk,
+                'name': tle.title
             }
             data.append(category_details)
 
@@ -137,8 +137,8 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
         data = json.loads(request.data['data'])
 
-        for i in request.FILES:
-            data['map_data'][int(i.split('_')[-1])]['image'] = request.FILES[i]
+        for file in request.FILES:
+            data['map_data'][int(file.split('_')[-1])]['image'] = request.FILES[file]
 
         camera_data = data.pop('camera')
 
@@ -386,7 +386,6 @@ class ObservationVoteViewSet(APIView):
 
     def post(self, request, *args, **kwargs):
         observation_id = kwargs.get('pk')
-        user = request.user
         data = request.data
         try:
             observation_obj = Observation.objects.get(id=observation_id)
@@ -394,16 +393,17 @@ class ObservationVoteViewSet(APIView):
             return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         is_status_change = False
-        for i in data.get('votes'):
-            verify_obs_obj = VerifyObservation.objects.create(observation_id=observation_id, user=user,
-                                                              category_id=i.get("category_id"), vote=i.get("vote"))
+        for user_vote in data.get('votes'):
+            verify_obs_obj = VerifyObservation.objects.create(observation_id=observation_id, user=request.user,
+                                                              category_id=user_vote.get("category_id"),
+                                                              vote=user_vote.get("vote"))
 
             if verify_obs_obj.user.is_superuser and verify_obs_obj.vote:
                 # If an admin votes yes on any category of the observation it will send for verification.
                 is_status_change = True
 
             if VerifyObservation.objects.filter(observation_id=observation_id,
-                                                category_id=i.get("category_id"), vote=True).count() > 3:
+                                                category_id=user_vote.get("category_id"), vote=True).count() > 3:
                 # If any category of the observation have more than 3 yes votes it will send for verification.
                 is_status_change = True
 
