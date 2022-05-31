@@ -505,8 +505,12 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         observation_cache_common = []
         if cache.get('common_observation_cache_data'):
             print("yes")
-            observation_cache_common = list(required_observation_ids.intersection(
-                set(cache.get('common_observation_cache_data'))))
+            # observation_cache_common = list(required_observation_ids.intersection(
+            #     set(cache.get('common_observation_cache_data'))))
+
+            # Using list comprehension instead of set
+            observation_cache_common = [
+                i for i in required_observation_ids if i in cache.get('common_observation_cache_data')]
 
         is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
         is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
