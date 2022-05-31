@@ -64,7 +64,7 @@ class BlogViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         if not request.data.get('article_type'):
             return Response({'detail': 'Article type not selected.', 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
-        if not request.data.get('thumbnail_image'):
+        if request.data.get('thumbnail_image') == 'null':
             return Response({'detail': 'Thumbnail image not provided.', 'status': 0},
                             status=status.HTTP_400_BAD_REQUEST)
         if int(request.data.get('article_type')) == 1 and not request.data.get('category'):
@@ -103,7 +103,7 @@ class BlogViewSet(viewsets.ModelViewSet):
             return Response(constants.NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
         if not request.data.get('article_type'):
             return Response({'detail': 'Article type not selected.', 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
-        if not request.data.get('thumbnail_image'):
+        if request.data.get('thumbnail_image') == 'null':
             return Response({'detail': 'Thumbnail image not provided.', 'status': 0},
                             status=status.HTTP_400_BAD_REQUEST)
         if int(request.data.get('article_type')) == 1 and not request.data.get('category'):
