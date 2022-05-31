@@ -269,7 +269,10 @@ class ObservationCommentViewSet(viewsets.ModelViewSet):
     CRUD operations for observation comments
     """
     serializer_class = ObservationCommentSerializer
-    permission_classes = (IsAuthenticated,)
+
+    def get_permissions(self):
+        permission_classes = (IsAuthenticated, ) if self.action == 'post' else []
+        return [permission() for permission in permission_classes]
 
     def list(self, request, *args, **kwargs):
         observation = get_object_or_404(Observation, pk=kwargs.get('pk'))
