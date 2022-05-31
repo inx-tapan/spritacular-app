@@ -163,7 +163,28 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         try:
-            obs_obj = Observation.objects.get(pk=kwargs.get('pk'), user=request.user, is_submit=False)
+            # obs_obj = Observation.objects.get(pk=kwargs.get('pk'), user=request.user, is_submit=False)
+            is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
+            is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
+            is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
+
+            obs_obj = Observation.objects.filter(pk=kwargs.get('pk'), user=request.user, is_submit=False)\
+                .prefetch_related('user', 'camera', 'observationimagemapping_set',
+                                  Prefetch('observationcategorymapping_set',
+                                           queryset=ObservationCategoryMapping.objects.prefetch_related('category'))
+                                  ,
+                                  Prefetch('observationlike_set',
+                                           queryset=ObservationLike.objects.all())
+                                  ,
+                                  Prefetch('observationwatchcount_set',
+                                           queryset=ObservationWatchCount.objects.all())
+                                  ).annotate(is_like=Exists(is_like),
+                                             is_watch=Exists(is_watch),
+                                             is_voted=Exists(is_voted)
+                                             ).first()
+
+            if not obs_obj:
+                raise Observation.DoesNotExist("Not found.")
         except Observation.DoesNotExist:
             return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
