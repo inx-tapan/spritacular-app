@@ -503,7 +503,7 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
             Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')
         ).values_list('id', flat=True))
 
-        # observation_cache_common = []
+        observation_cache_common = []
         cache_obs_dict = cache.get('common_observation_cache_data')
         diff_ids = set()
 
