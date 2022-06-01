@@ -214,8 +214,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
         is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
         is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
-        observation_filter = Observation.objects.filter(filters). \
-            exclude(Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')) \
+        observation_filter = Observation.objects.filter(filters) \
             .order_by('-pk').distinct('id') \
             .prefetch_related('user', 'camera', 'observationimagemapping_set',
                               Prefetch('observationcategorymapping_set',
