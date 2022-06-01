@@ -498,21 +498,12 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         if data.get('shutter_speed'):
             filters = filters & Q(camera__shutter_speed__iexact=data.get('shutter_speed'))
 
-
-        cache.set('test', {1: {'2': 'abc', 3: 'def', 4: 'ghi'}})
-        start_time = time.time()
-        testing = cache.get('test')
-        print(testing)
-        print(testing.get(1))
-        print(f"zero:{time.time() - start_time}")
-        # cache.delete('test')
-
         # get all required ids all api calls
         required_observation_ids = set(Observation.objects.filter(filters).only('id').exclude(
             Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')
-        ).distinct('id').values_list('id', flat=True))
+        ).values_list('id', flat=True))
 
-        observation_cache_common = []
+        # observation_cache_common = []
         cache_obs_dict = cache.get('common_observation_cache_data')
         diff_ids = set()
 
@@ -520,12 +511,15 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
             print("yes")
             start_time = time.time()
             diff_ids = required_observation_ids - set(cache_obs_dict)
-            print(f"++{len(diff_ids)}")
+            print(f"difference length++{len(diff_ids)}")
             print(f"one:{time.time()-start_time}")
             # Using list comprehension instead of set
             start_time = time.time()
+            # observation_cache_common = [
+            #     cache_obs_dict[i] for i in required_observation_ids if i in cache.get('common_observation_cache_data')]
+            # Alternative test for observation_cache_common
             observation_cache_common = [
-                cache_obs_dict[i] for i in required_observation_ids if i in cache.get('common_observation_cache_data')]
+                cache_obs_dict.get(i) for i in required_observation_ids.intersection(set(cache_obs_dict))]
             print(f"two:{time.time()-start_time}")
 
         if cache_obs_dict and not diff_ids:
@@ -536,9 +530,9 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
             start_time = time.time()
             required_obs_ids = diff_ids if cache_obs_dict else required_observation_ids
 
-            is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
-            is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
-            is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
+            is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user).only('id')
+            is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user).only('id')
+            is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user).only('id')
 
             observation_filter = list(Observation.objects.filter(id__in=required_obs_ids)
                                       .exclude(
@@ -560,7 +554,7 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
                                                                    is_voted=Exists(is_voted)
                                                                    ))
 
-            # print(f"Original list ->{observation_filter}")
+            print(f"Original list length->{len(observation_filter)}")
             print(f"three:{time.time() - start_time}")
 
             start_time = time.time()
@@ -583,7 +577,7 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
             #     observation_filter.append(cache.get('common_observation_cache_data')[i])
             #     obs_cache_data[i] = cache.get('common_observation_cache_data')[i]
 
-        # print(f"{len(observation_filter)}--{len(set(observation_filter))}")
+        print(f"{len(observation_filter)}--{len(set(observation_filter))}")
 
         # if len(observation_filter) == len(set(observation_filter)):
         #     # Set cache only if the queryset full of unique instances
@@ -600,8 +594,9 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         else:
             serializer = self.serializer_class(page, many=True, context={'user_observation_collection': True,
                                                                          'request': request})
+            sd = serializer.data
             print(f"five:{time.time() - start_time}")
-            return self.get_paginated_response({'data': serializer.data})
+            return self.get_paginated_response({'data': sd})
 
 
 class GenerateObservationCSVViewSet(APIView):
