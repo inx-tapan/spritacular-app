@@ -23,6 +23,28 @@ from rest_framework.pagination import PageNumberPagination
 import pandas as pd
 
 
+def set_or_update_cache(cache_obs_dict, observation_filter, observation_cache_common):
+    """
+    function to set or update/override existing cache
+    :param cache_obs_dict:
+    :param observation_filter:
+    :param observation_cache_common:
+    :return: observation_filter for pagination
+    """
+    if not cache_obs_dict:
+        print("cache set")
+        cache.set('common_observation_cache_data', {})
+
+    cache_obs_dict = cache.get('common_observation_cache_data')
+
+    for obs_obj in observation_filter:
+        cache_obs_dict[obs_obj.id] = obs_obj
+
+    cache.set('common_observation_cache_data', cache_obs_dict)
+    observation_filter += observation_cache_common
+    return observation_filter
+
+
 # class ImageMetadataViewSet(APIView):
 #     serializer_class = ImageMetadataSerializer
 #
@@ -341,6 +363,29 @@ class ObservationGalleryViewSet(ListAPIView):
             filters = filters & Q(is_verified=False)
 
         if request.user.is_authenticated and (request.user.is_trained or request.user.is_superuser):
+            required_observation_ids = set(Observation.objects.filter(filters).only('id').exclude(
+                Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')
+            ).values_list('id', flat=True))
+        else:
+            required_observation_ids = set(Observation.objects.filter(is_submit=True, is_verified=True).only('id').exclude(
+                Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')
+            ).values_list('id', flat=True))
+
+        is_set_cache = False
+
+        observation_cache_common = []
+        cache_obs_dict = cache.get('common_observation_cache_data')
+        diff_ids = set()
+        if cache_obs_dict:
+            diff_ids = required_observation_ids - set(cache_obs_dict)
+            # Alternative test for observation_cache_common
+            observation_cache_common = [
+                cache_obs_dict.get(i) for i in required_observation_ids.intersection(set(cache_obs_dict))]
+
+        if cache_obs_dict and not diff_ids:
+            print("ALL FROM CACHE")
+            observation_filter = observation_cache_common
+        elif request.user.is_authenticated and (request.user.is_trained or request.user.is_superuser):
             # Trained user can see both verified and unverified observation on gallery screen.
             is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
             is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
@@ -350,6 +395,7 @@ class ObservationGalleryViewSet(ListAPIView):
                                                                               is_watch=Exists(is_watch),
                                                                               is_voted=Exists(is_voted)
                                                                               )
+            is_set_cache = True
 
         elif request.user.is_authenticated:
             # For normal users
@@ -362,10 +408,16 @@ class ObservationGalleryViewSet(ListAPIView):
                 is_watch=Exists(is_watch),
                 is_voted=Exists(is_voted)
             )
+            is_set_cache = True
 
         else:
             # For unauthenticated users
             observation_filter = self.get_queryset().filter(is_submit=True, is_verified=True)
+            is_set_cache = True
+
+        if is_set_cache:
+            # Set or update observation cache
+            observation_filter = set_or_update_cache(cache_obs_dict, observation_filter, observation_cache_common)
 
         page = self.paginate_queryset(observation_filter)
         if not page:
@@ -499,6 +551,7 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
             filters = filters & Q(camera__shutter_speed__iexact=data.get('shutter_speed'))
 
         # get all required ids all api calls
+        # Excluding observations not having original image in .exclude()
         required_observation_ids = set(Observation.objects.filter(filters).only('id').exclude(
             Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')
         ).values_list('id', flat=True))
@@ -506,28 +559,17 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         observation_cache_common = []
         cache_obs_dict = cache.get('common_observation_cache_data')
         diff_ids = set()
-
         if cache_obs_dict:
-            print("yes")
-            start_time = time.time()
             diff_ids = required_observation_ids - set(cache_obs_dict)
-            print(f"difference length++{len(diff_ids)}")
-            print(f"one:{time.time()-start_time}")
-            # Using list comprehension instead of set
-            start_time = time.time()
-            # observation_cache_common = [
-            #     cache_obs_dict[i] for i in required_observation_ids if i in cache.get('common_observation_cache_data')]
             # Alternative test for observation_cache_common
             observation_cache_common = [
                 cache_obs_dict.get(i) for i in required_observation_ids.intersection(set(cache_obs_dict))]
-            print(f"two:{time.time()-start_time}")
 
         if cache_obs_dict and not diff_ids:
             print("ALL FROM CACHE")
             observation_filter = observation_cache_common
 
         else:
-            start_time = time.time()
             required_obs_ids = diff_ids if cache_obs_dict else required_observation_ids
 
             is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user).only('id')
@@ -555,36 +597,12 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
                                                                    ))
 
             print(f"Original list length->{len(observation_filter)}")
-            print(f"three:{time.time() - start_time}")
 
-            start_time = time.time()
-            if not cache_obs_dict:
-                print("cache set")
-                cache.set('common_observation_cache_data', {})
-
-            cache_obs_dict = cache.get('common_observation_cache_data')
-
-            for obs_obj in observation_filter:
-                cache_obs_dict[obs_obj.id] = obs_obj
-
-            cache.set('common_observation_cache_data', cache_obs_dict)
-            print(f"four:{time.time() - start_time}")
-
-            observation_filter += observation_cache_common
-
-            # obs_cache_data = {obs_obj.id: obs_obj for obs_obj in observation_filter}
-            # for i in observation_cache_common:
-            #     observation_filter.append(cache.get('common_observation_cache_data')[i])
-            #     obs_cache_data[i] = cache.get('common_observation_cache_data')[i]
+            # Set or update observation cache
+            observation_filter = set_or_update_cache(cache_obs_dict, observation_filter, observation_cache_common)
 
         print(f"{len(observation_filter)}--{len(set(observation_filter))}")
 
-        # if len(observation_filter) == len(set(observation_filter)):
-        #     # Set cache only if the queryset full of unique instances
-        #     print("**cache it**")
-        #     cache.set('common_observation_cache_data', obs_cache_data)
-
-        start_time = time.time()
         page = self.paginate_queryset(observation_filter)
         if not page:
             serializer = self.serializer_class(observation_filter, many=True,
@@ -594,9 +612,7 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         else:
             serializer = self.serializer_class(page, many=True, context={'user_observation_collection': True,
                                                                          'request': request})
-            sd = serializer.data
-            print(f"five:{time.time() - start_time}")
-            return self.get_paginated_response({'data': sd})
+            return self.get_paginated_response({'data': serializer.data})
 
 
 class GenerateObservationCSVViewSet(APIView):
