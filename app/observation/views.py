@@ -147,7 +147,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         if observation_serializer.is_valid(raise_exception=True) and camera_serializer.is_valid(
                 raise_exception=True):
             observation_serializer.save()
-
+            cache.delete('common_observation_cache_data')
             return Response(OBS_FORM_SUCCESS, status=status.HTTP_201_CREATED)
 
         return Response({'observation_errors': observation_serializer.errors,
@@ -367,9 +367,10 @@ class ObservationGalleryViewSet(ListAPIView):
                 Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')
             ).values_list('id', flat=True))
         else:
-            required_observation_ids = set(Observation.objects.filter(is_submit=True, is_verified=True).only('id').exclude(
-                Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')
-            ).values_list('id', flat=True))
+            required_observation_ids = set(
+                Observation.objects.filter(is_submit=True, is_verified=True).only('id').exclude(
+                    Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')
+                ).values_list('id', flat=True))
 
         is_set_cache = False
 
@@ -377,6 +378,7 @@ class ObservationGalleryViewSet(ListAPIView):
         cache_obs_dict = cache.get('common_observation_cache_data')
         diff_ids = set()
         if cache_obs_dict:
+            print("yes")
             diff_ids = required_observation_ids - set(cache_obs_dict)
             # Alternative test for observation_cache_common
             observation_cache_common = [
@@ -386,15 +388,16 @@ class ObservationGalleryViewSet(ListAPIView):
             print("ALL FROM CACHE")
             observation_filter = observation_cache_common
         elif request.user.is_authenticated and (request.user.is_trained or request.user.is_superuser):
+            print("super")
             # Trained user can see both verified and unverified observation on gallery screen.
             is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
             is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
             is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
 
-            observation_filter = self.get_queryset().filter(filters).annotate(is_like=Exists(is_like),
-                                                                              is_watch=Exists(is_watch),
-                                                                              is_voted=Exists(is_voted)
-                                                                              )
+            observation_filter = list(self.get_queryset().filter(filters).annotate(is_like=Exists(is_like),
+                                                                                   is_watch=Exists(is_watch),
+                                                                                   is_voted=Exists(is_voted)
+                                                                                   ))
             is_set_cache = True
 
         elif request.user.is_authenticated:
@@ -403,21 +406,24 @@ class ObservationGalleryViewSet(ListAPIView):
             is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
             is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
 
-            observation_filter = self.get_queryset().filter(is_submit=True, is_verified=True).annotate(
+            observation_filter = list(self.get_queryset().filter(is_submit=True, is_verified=True).annotate(
                 is_like=Exists(is_like),
                 is_watch=Exists(is_watch),
                 is_voted=Exists(is_voted)
-            )
+            ))
             is_set_cache = True
 
         else:
             # For unauthenticated users
-            observation_filter = self.get_queryset().filter(is_submit=True, is_verified=True)
+            observation_filter = list(self.get_queryset().filter(is_submit=True, is_verified=True))
             is_set_cache = True
 
         if is_set_cache:
+            print("set cache")
             # Set or update observation cache
             observation_filter = set_or_update_cache(cache_obs_dict, observation_filter, observation_cache_common)
+
+        print(f"{len(observation_filter)}--{len(set(observation_filter))}")
 
         page = self.paginate_queryset(observation_filter)
         if not page:
@@ -520,7 +526,6 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
     queryset = Observation.objects.all()
 
     def create(self, request, *args, **kwargs):
-        # cache.delete('common_observation_cache_data')
         query_data = request.query_params
         data = request.data
 
