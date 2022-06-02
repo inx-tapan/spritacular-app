@@ -1,6 +1,5 @@
 import datetime
 import json
-import time
 
 import pytz
 from django.core.cache import cache
@@ -192,7 +191,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
             is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
             is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
 
-            obs_obj = Observation.objects.filter(pk=kwargs.get('pk'), user=request.user, is_submit=False)\
+            obs_obj = Observation.objects.filter(pk=kwargs.get('pk'), user=request.user, is_submit=False) \
                 .prefetch_related('user', 'camera', 'observationimagemapping_set',
                                   Prefetch('observationcategorymapping_set',
                                            queryset=ObservationCategoryMapping.objects.prefetch_related('category'))
@@ -294,7 +293,7 @@ class ObservationCommentViewSet(viewsets.ModelViewSet):
     serializer_class = ObservationCommentSerializer
 
     def get_permissions(self):
-        permission_classes = (IsAuthenticated, ) if self.action == 'post' else []
+        permission_classes = (IsAuthenticated,) if self.action == 'post' else []
         return [permission() for permission in permission_classes]
 
     def list(self, request, *args, **kwargs):
@@ -608,21 +607,20 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
                                       .exclude(
                 Q(observationimagemapping__image=None) |
                 Q(observationimagemapping__image='')
-            ).order_by('-pk').distinct('id')
-                                      .prefetch_related('user', 'camera', 'observationimagemapping_set',
-                                                        Prefetch('observationcategorymapping_set',
-                                                                 queryset=ObservationCategoryMapping.objects.prefetch_related(
-                                                                     'category'))
-                                                        ,
-                                                        Prefetch('observationlike_set',
-                                                                 queryset=ObservationLike.objects.all())
-                                                        ,
-                                                        Prefetch('observationwatchcount_set',
-                                                                 queryset=ObservationWatchCount.objects.all())
-                                                        ).annotate(is_like=Exists(is_like),
-                                                                   is_watch=Exists(is_watch),
-                                                                   is_voted=Exists(is_voted)
-                                                                   ))
+            ).order_by('-pk').prefetch_related('user', 'camera', 'observationimagemapping_set',
+                                               Prefetch('observationcategorymapping_set',
+                                                        queryset=ObservationCategoryMapping.objects.prefetch_related(
+                                                            'category'))
+                                               ,
+                                               Prefetch('observationlike_set',
+                                                        queryset=ObservationLike.objects.all())
+                                               ,
+                                               Prefetch('observationwatchcount_set',
+                                                        queryset=ObservationWatchCount.objects.all())
+                                               ).annotate(is_like=Exists(is_like),
+                                                          is_watch=Exists(is_watch),
+                                                          is_voted=Exists(is_voted)
+                                                          ))
 
             print(f"Original list length->{len(observation_filter)}")
 
