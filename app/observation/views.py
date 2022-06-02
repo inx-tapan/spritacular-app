@@ -400,17 +400,16 @@ class ObservationGalleryViewSet(ListAPIView):
         cache_obs_dict = cache.get('common_observation_cache_data')
         diff_ids = set()
         if cache_obs_dict:
-            print("yes")
             diff_ids = required_observation_ids - set(cache_obs_dict)
             # Alternative test for observation_cache_common
             observation_cache_common = [
                 cache_obs_dict.get(i) for i in required_observation_ids.intersection(set(cache_obs_dict))]
+            observation_cache_common.reverse()
 
         if cache_obs_dict and not diff_ids:
             print("ALL FROM CACHE")
             observation_filter = observation_cache_common
         elif request.user.is_authenticated and (request.user.is_trained or request.user.is_superuser):
-            print("super")
             # Trained user can see both verified and unverified observation on gallery screen.
             is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
             is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
@@ -445,7 +444,7 @@ class ObservationGalleryViewSet(ListAPIView):
             # Set or update observation cache
             observation_filter = set_or_update_cache(cache_obs_dict, observation_filter, observation_cache_common)
 
-        print(f"{len(observation_filter)}--{len(set(observation_filter))}")
+        # print(f"{len(observation_filter)}--{len(set(observation_filter))}")
 
         page = self.paginate_queryset(observation_filter)
         if not page:
@@ -590,7 +589,8 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
             diff_ids = required_observation_ids - set(cache_obs_dict)
             # Alternative test for observation_cache_common
             observation_cache_common = [
-                cache_obs_dict.get(i) for i in required_observation_ids.intersection(set(cache_obs_dict))]
+                cache_obs_dict.get(i) for i in set(cache_obs_dict).intersection(required_observation_ids)]
+            observation_cache_common.reverse()
 
         if cache_obs_dict and not diff_ids:
             print("ALL FROM CACHE")
@@ -622,12 +622,10 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
                                                           is_voted=Exists(is_voted)
                                                           ))
 
-            print(f"Original list length->{len(observation_filter)}")
-
             # Set or update observation cache
             observation_filter = set_or_update_cache(cache_obs_dict, observation_filter, observation_cache_common)
 
-        print(f"{len(observation_filter)}--{len(set(observation_filter))}")
+        # print(f"{len(observation_filter)}--{len(set(observation_filter))}")
 
         page = self.paginate_queryset(observation_filter)
         if not page:
