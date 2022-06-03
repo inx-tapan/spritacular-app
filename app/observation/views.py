@@ -583,6 +583,7 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         if data.get('shutter_speed'):
             filters = filters & Q(camera__shutter_speed__iexact=data.get('shutter_speed'))
 
+        cache.delete('common_observation_cache_data')
         # get all required ids all api calls
         # Excluding observations not having original image in .exclude()
         required_observation_ids = set(Observation.objects.filter(filters).only('id').exclude(
