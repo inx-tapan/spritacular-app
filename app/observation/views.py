@@ -39,7 +39,7 @@ def set_or_update_cache(cache_obs_dict, observation_filter, observation_cache_co
     for obs_obj in observation_filter:
         cache_obs_dict[obs_obj.id] = obs_obj
 
-    cache.set('common_observation_cache_data', cache_obs_dict)
+    cache.set('common_observation_cache_data', cache_obs_dict, timeout=3600)
     observation_filter += observation_cache_common
     return observation_filter
 
