@@ -355,10 +355,8 @@ class ObservationGalleryViewSet(ListAPIView):
     """
     pagination_class = PageNumberPagination
 
-    def get_queryset(self):
-        return Observation.objects.all() \
-            .exclude(Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')) \
-            .order_by('-pk').distinct('id') \
+    def get_queryset(self, *args):
+        return Observation.objects.filter(id__in=args[0]).order_by('-pk').distinct('id') \
             .prefetch_related('user', 'camera', 'observationimagemapping_set',
                               Prefetch('observationcategorymapping_set',
                                        queryset=ObservationCategoryMapping.objects.prefetch_related('category'))
@@ -386,12 +384,16 @@ class ObservationGalleryViewSet(ListAPIView):
 
         if request.user.is_authenticated and (request.user.is_trained or request.user.is_superuser):
             required_observation_ids = set(Observation.objects.filter(filters).only('id').exclude(
-                Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')
+                Q(observationimagemapping__image=None) | Q(observationimagemapping__image='') |
+                Q(observationimagemapping__compressed_image=None) |
+                Q(observationimagemapping__compressed_image='')
             ).values_list('id', flat=True))
         else:
             required_observation_ids = set(
                 Observation.objects.filter(is_submit=True, is_verified=True).only('id').exclude(
-                    Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')
+                    Q(observationimagemapping__image=None) | Q(observationimagemapping__image='') |
+                    Q(observationimagemapping__compressed_image=None) |
+                    Q(observationimagemapping__compressed_image='')
                 ).values_list('id', flat=True))
 
         is_set_cache = False
@@ -403,40 +405,45 @@ class ObservationGalleryViewSet(ListAPIView):
             diff_ids = required_observation_ids - set(cache_obs_dict)
             # Alternative test for observation_cache_common
             observation_cache_common = [
-                cache_obs_dict.get(i) for i in required_observation_ids.intersection(set(cache_obs_dict))]
-            observation_cache_common.reverse()
+                cache_obs_dict.get(i) for i in sorted(set(cache_obs_dict).intersection(required_observation_ids),
+                                                      reverse=True)]
+            # observation_cache_common.reverse()
 
         if cache_obs_dict and not diff_ids:
             print("ALL FROM CACHE")
             observation_filter = observation_cache_common
-        elif request.user.is_authenticated and (request.user.is_trained or request.user.is_superuser):
-            # Trained user can see both verified and unverified observation on gallery screen.
-            is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
-            is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
-            is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
-
-            observation_filter = list(self.get_queryset().filter(filters).annotate(is_like=Exists(is_like),
-                                                                                   is_watch=Exists(is_watch),
-                                                                                   is_voted=Exists(is_voted)
-                                                                                   ))
-            is_set_cache = True
 
         elif request.user.is_authenticated:
-            # For normal users
+            # Trained user can see both verified and unverified observation on gallery screen.
+            required_obs_ids = diff_ids if cache_obs_dict else required_observation_ids
             is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
             is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
             is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
 
-            observation_filter = list(self.get_queryset().filter(is_submit=True, is_verified=True).annotate(
-                is_like=Exists(is_like),
-                is_watch=Exists(is_watch),
-                is_voted=Exists(is_voted)
-            ))
+            observation_filter = list(
+                self.get_queryset(required_obs_ids).filter(id__in=required_obs_ids).annotate(is_like=Exists(is_like),
+                                                                                             is_watch=Exists(is_watch),
+                                                                                             is_voted=Exists(is_voted)
+                                                                                             ))
             is_set_cache = True
+
+        # elif request.user.is_authenticated:
+        #     # For normal users
+        #     is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
+        #     is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
+        #     is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
+        #
+        #     observation_filter = list(self.get_queryset().filter(id__in=required_obs_ids).annotate(
+        #         is_like=Exists(is_like),
+        #         is_watch=Exists(is_watch),
+        #         is_voted=Exists(is_voted)
+        #     ))
+        #     is_set_cache = True
 
         else:
             # For unauthenticated users
-            observation_filter = list(self.get_queryset().filter(is_submit=True, is_verified=True))
+            required_obs_ids = diff_ids if cache_obs_dict else required_observation_ids
+            observation_filter = list(self.get_queryset(required_obs_ids).filter(id__in=required_obs_ids))
             is_set_cache = True
 
         if is_set_cache:
@@ -579,7 +586,9 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         # get all required ids all api calls
         # Excluding observations not having original image in .exclude()
         required_observation_ids = set(Observation.objects.filter(filters).only('id').exclude(
-            Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')
+            Q(observationimagemapping__image=None) | Q(observationimagemapping__image='') |
+            Q(observationimagemapping__compressed_image=None) |
+            Q(observationimagemapping__compressed_image='')
         ).values_list('id', flat=True))
 
         observation_cache_common = []
@@ -589,8 +598,8 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
             diff_ids = required_observation_ids - set(cache_obs_dict)
             # Alternative test for observation_cache_common
             observation_cache_common = [
-                cache_obs_dict.get(i) for i in set(cache_obs_dict).intersection(required_observation_ids)]
-            observation_cache_common.reverse()
+                cache_obs_dict.get(i) for i in sorted(set(cache_obs_dict).intersection(required_observation_ids),
+                                                      reverse=True)]
 
         if cache_obs_dict and not diff_ids:
             print("ALL FROM CACHE")
@@ -603,24 +612,22 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
             is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user).only('id')
             is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user).only('id')
 
-            observation_filter = list(Observation.objects.filter(id__in=required_obs_ids)
-                                      .exclude(
-                Q(observationimagemapping__image=None) |
-                Q(observationimagemapping__image='')
-            ).order_by('-pk').prefetch_related('user', 'camera', 'observationimagemapping_set',
-                                               Prefetch('observationcategorymapping_set',
-                                                        queryset=ObservationCategoryMapping.objects.prefetch_related(
-                                                            'category'))
-                                               ,
-                                               Prefetch('observationlike_set',
-                                                        queryset=ObservationLike.objects.all())
-                                               ,
-                                               Prefetch('observationwatchcount_set',
-                                                        queryset=ObservationWatchCount.objects.all())
-                                               ).annotate(is_like=Exists(is_like),
-                                                          is_watch=Exists(is_watch),
-                                                          is_voted=Exists(is_voted)
-                                                          ))
+            observation_filter = list(
+                Observation.objects.filter(id__in=required_obs_ids).order_by('-pk')
+                    .prefetch_related('user', 'camera', 'observationimagemapping_set',
+                                      Prefetch('observationcategorymapping_set',
+                                               queryset=ObservationCategoryMapping.objects.prefetch_related(
+                                                   'category'))
+                                      ,
+                                      Prefetch('observationlike_set',
+                                               queryset=ObservationLike.objects.all())
+                                      ,
+                                      Prefetch('observationwatchcount_set',
+                                               queryset=ObservationWatchCount.objects.all())
+                                      ).annotate(is_like=Exists(is_like),
+                                                 is_watch=Exists(is_watch),
+                                                 is_voted=Exists(is_voted)
+                                                 ))
 
             # Set or update observation cache
             observation_filter = set_or_update_cache(cache_obs_dict, observation_filter, observation_cache_common)
