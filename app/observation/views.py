@@ -309,6 +309,7 @@ class ObservationCommentViewSet(viewsets.ModelViewSet):
         serializer = self.serializer_class(data=data, context={'request': request})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
+            cache.delete('common_observation_cache_data')
             return Response({'data': serializer.data, 'status': 1}, status=status.HTTP_201_CREATED)
 
         return Response({'detail': serializer.errors, 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
@@ -323,6 +324,7 @@ class ObservationLikeViewSet(APIView):
         if data.get('is_like') == '1':
             if ObservationLike.objects.filter(observation_id=kwargs.get('pk'), user=request.user).exists():
                 like_count = ObservationLike.objects.filter(observation_id=kwargs.get('pk')).count()
+                cache.delete('common_observation_cache_data')
                 return Response({'like_count': like_count, 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
 
             ObservationLike.objects.create(observation_id=kwargs.get('pk'), user=request.user)
@@ -333,6 +335,7 @@ class ObservationLikeViewSet(APIView):
             like_status = False
 
         like_count = ObservationLike.objects.filter(observation_id=kwargs.get('pk')).count()
+        cache.delete('common_observation_cache_data')
         return Response({'like_count': like_count, 'status': 1, 'like': like_status}, status=status.HTTP_200_OK)
 
 
@@ -346,6 +349,7 @@ class ObservationWatchCountViewSet(APIView):
 
         watch_count = ObservationWatchCount.objects.filter(observation_id=kwargs.get('pk')).count()
 
+        cache.delete('common_observation_cache_data')
         return Response({'watch_count': watch_count, 'status': 1}, status=status.HTTP_200_OK)
 
 
@@ -501,6 +505,7 @@ class ObservationVoteViewSet(APIView):
             observation_obj.is_to_be_verify = True
             observation_obj.save(update_fields=['is_to_be_verify'])
 
+        cache.delete('common_observation_cache_data')
         return Response({'success': 'Successfully Voted.', 'status': 1}, status=status.HTTP_200_OK)
 
 
@@ -524,6 +529,7 @@ class ObservationVerifyViewSet(APIView):
             observation_obj.is_verified = True
             observation_obj.is_reject = False
             observation_obj.save(update_fields=['is_verified', 'is_reject'])
+            cache.delete('common_observation_cache_data')
 
             return Response({'success': 'Observation Approved.'}, status=status.HTTP_200_OK)
 
@@ -542,6 +548,7 @@ class ObservationVerifyViewSet(APIView):
                                                           additional_comment=reason_data.get('additional_comment',
                                                                                              None))
 
+            cache.delete('common_observation_cache_data')
             return Response({'success': 'Observation Rejected.'}, status=status.HTTP_200_OK)
 
         return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
@@ -583,7 +590,6 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         if data.get('shutter_speed'):
             filters = filters & Q(camera__shutter_speed__iexact=data.get('shutter_speed'))
 
-        cache.delete('common_observation_cache_data')
         # get all required ids all api calls
         # Excluding observations not having original image in .exclude()
         required_observation_ids = set(Observation.objects.filter(filters).only('id').exclude(
