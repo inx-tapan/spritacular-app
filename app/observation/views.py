@@ -59,13 +59,19 @@ class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
 
     def list(self, request, *args, **kwargs):
-        data = []
-        for tle in self.queryset:
-            category_details = {
-                'id': tle.pk,
-                'name': tle.title
-            }
-            data.append(category_details)
+        if not cache.get('category_list'):
+            data = []
+            for tle in self.queryset:
+                category_details = {
+                    'id': tle.pk,
+                    'name': tle.title
+                }
+                data.append(category_details)
+            print("--category list cache set--")
+            cache.set('category_list', data, timeout=18000)
+        else:
+            print("--ALL CATEGORY LIST FROM CACHE--")
+            data = cache.get('category_list')
 
         return Response(data, status=status.HTTP_200_OK)
 
@@ -407,11 +413,10 @@ class ObservationGalleryViewSet(ListAPIView):
         diff_ids = set()
         if cache_obs_dict:
             diff_ids = required_observation_ids - set(cache_obs_dict)
-            # Alternative test for observation_cache_common
+            # collecting common observation objects
             observation_cache_common = [
                 cache_obs_dict.get(i) for i in sorted(set(cache_obs_dict).intersection(required_observation_ids),
                                                       reverse=True)]
-            # observation_cache_common.reverse()
 
         if cache_obs_dict and not diff_ids:
             print("ALL FROM CACHE")
@@ -431,19 +436,6 @@ class ObservationGalleryViewSet(ListAPIView):
                                                                                              ))
             is_set_cache = True
 
-        # elif request.user.is_authenticated:
-        #     # For normal users
-        #     is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
-        #     is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
-        #     is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
-        #
-        #     observation_filter = list(self.get_queryset().filter(id__in=required_obs_ids).annotate(
-        #         is_like=Exists(is_like),
-        #         is_watch=Exists(is_watch),
-        #         is_voted=Exists(is_voted)
-        #     ))
-        #     is_set_cache = True
-
         else:
             # For unauthenticated users
             required_obs_ids = diff_ids if cache_obs_dict else required_observation_ids
@@ -454,8 +446,6 @@ class ObservationGalleryViewSet(ListAPIView):
             print("set cache")
             # Set or update observation cache
             observation_filter = set_or_update_cache(cache_obs_dict, observation_filter, observation_cache_common)
-
-        # print(f"{len(observation_filter)}--{len(set(observation_filter))}")
 
         page = self.paginate_queryset(observation_filter)
         if not page:
@@ -603,7 +593,7 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         diff_ids = set()
         if cache_obs_dict:
             diff_ids = required_observation_ids - set(cache_obs_dict)
-            # Alternative test for observation_cache_common
+            # collecting common observation objects
             observation_cache_common = [
                 cache_obs_dict.get(i) for i in sorted(set(cache_obs_dict).intersection(required_observation_ids),
                                                       reverse=True)]
@@ -638,8 +628,6 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
 
             # Set or update observation cache
             observation_filter = set_or_update_cache(cache_obs_dict, observation_filter, observation_cache_common)
-
-        # print(f"{len(observation_filter)}--{len(set(observation_filter))}")
 
         page = self.paginate_queryset(observation_filter)
         if not page:
