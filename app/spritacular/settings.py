@@ -64,6 +64,9 @@ INSTALLED_APPS = [
 
     # query debug
     'silk',
+
+    # django cleanup for image and file fields
+    'django_cleanup.apps.CleanupConfig',
 ]
 
 AUTH_USER_MODEL = 'users.User'
