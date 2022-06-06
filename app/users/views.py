@@ -53,12 +53,6 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    # def retrieve(self, request, *args, **kwargs):
-    #     user = get_object_or_404(User, pk=self.kwargs['pk'])
-    #     self.check_object_permissions(request, user)
-    #     serializer = self.serializer_class(user)
-    #     return Response(serializer.data)
-
     def profile_update(self, request, pk=None):
         user = get_object_or_404(User, pk=pk)
         self.check_object_permissions(request, user)
@@ -66,12 +60,10 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
 
     def update_user_profile(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer_obj = self.serializer_class(instance, data=request.data,
-                                               context={'request': request, 'method': 'PUT'})
-        serializer_obj.is_valid(raise_exception=True)
-        # data = serializer_obj.update(instance, serializer_obj.validated_data)
-        serializer_obj.save()
-        return Response(serializer_obj.data, status=status.HTTP_200_OK)
+        serializer = self.serializer_class(instance, data=request.data, context={'request': request, 'method': 'PUT'})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def get_user_details(self, request, *args, **kwargs):
         user = request.user
@@ -127,12 +119,6 @@ class ChangePasswordViewSet(APIView):
         data['user'] = user
         serializer = self.serializer_class(data=data, context={"user": user})
         if serializer.is_valid():
-            # request.user.auth_token.delete()
-            # logout(request)
-            # ----- JWT
-            # refresh_token = request.data["refresh_token"]
-            # token = RefreshToken(refresh_token)
-            # token.blacklist()
             return Response({"Success": True, "message": constants.CHANGE_PASS_SUCCESS}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

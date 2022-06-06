@@ -109,7 +109,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
                                    country_code=validated_data.get('country_code'),
                                    place_uid=validated_data.get('place_uid'),
                                    is_first_login=True, location_metadata=validated_data.get('location_metadata'))
-        user.set_password(validated_data['password'])
+        user.set_password(validated_data.get('password'))
         user.save()
 
         return user
@@ -125,13 +125,14 @@ class ChangePasswordSerializer(serializers.Serializer):
     #     validate_password(password=value, user=user)
     #     return value
 
-    def validate(self, validate_data):
-        old_password = validate_data['old_password']
-        new_password = validate_data['new_password']
-        confirm_password = validate_data['confirm_password']
+    def validate(self, validated_data):
+        old_password = validated_data.get('old_password')
+        new_password = validated_data.get('new_password')
+        confirm_password = validated_data.get('confirm_password')
         user = self.context.get('user')
 
-        if user := authenticate(username=user.email, password=old_password):
+        user_check = authenticate(username=user.email, password=old_password)
+        if user_check:
             try:
                 validate_password(password=new_password, user=user)
             except Exception as e:
@@ -145,7 +146,7 @@ class ChangePasswordSerializer(serializers.Serializer):
         else:
             raise serializers.ValidationError({'details': constants.INVALID_OLD_PASS}, code=400)
 
-        return validate_data
+        return validated_data
 
 
 class CameraSettingSerializer(serializers.ModelSerializer):
