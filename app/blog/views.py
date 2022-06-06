@@ -92,7 +92,7 @@ class BlogViewSet(viewsets.ModelViewSet):
         blog_obj.set_slug()
 
         for i in image_ids:
-            BlogImageData.objects.filter(id=i.get('id')).update(is_published=True)
+            BlogImageData.objects.filter(id=i.get('id')).update(is_published=True, blog=blog_obj)
 
         return Response(constants.BLOG_FORM_SUCCESS, status=status.HTTP_201_CREATED)
 
@@ -139,7 +139,13 @@ class BlogViewSet(viewsets.ModelViewSet):
         blog_obj.set_slug()
 
         for i in image_ids:
-            BlogImageData.objects.filter(id=i.get('id')).update(is_published=True)
+            BlogImageData.objects.filter(id=i.get('id')).update(is_published=True, blog=blog_obj)
+
+        blog_images = BlogImageData.objects.filter(blog=blog_obj)
+        for img in blog_images:
+            if not Blog.objects.filter(id=blog_obj.id, content__icontains=img.image_file.url).exists():
+                img.is_published = False
+                img.save(update_fields=['is_published'])
 
         return Response(constants.BLOG_FORM_SUCCESS, status=status.HTTP_200_OK)
 
