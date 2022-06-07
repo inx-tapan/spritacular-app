@@ -7,6 +7,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from sentry_sdk import capture_exception
 
 from users.models import User
 from .models import QuizOption, Question, Quiz, QuizQuestionMapping, QuizAttempt, UserQuizMapping, Configuration
@@ -139,6 +140,7 @@ class QuizViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_201_CREATED)
 
         except ValidationError as e:
+            capture_exception(e)
             print(f"GOT IT----{e}")
 
         return Response({'errors': serializer.errors or error_message}, status=status.HTTP_400_BAD_REQUEST)

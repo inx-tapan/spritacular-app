@@ -3,6 +3,7 @@ import os
 from celery import shared_task
 from django.core.files import File
 from observation.models import ObservationImageMapping
+from sentry_sdk import capture_exception
 
 
 # @shared_task(name='observation_image_compression')
@@ -57,4 +58,5 @@ def get_original_image(obs_id):
         os.remove(f"{file_name.split('/')[-1]}")
 
     except Exception as e:
+        capture_exception(e)
         print(f"Something went wrong : {e}")

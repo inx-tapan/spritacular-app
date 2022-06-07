@@ -17,9 +17,10 @@ from datetime import timedelta
 
 import firebase_admin
 from firebase_admin import credentials
-
-
 from firebase_admin import initialize_app
+
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -287,4 +288,20 @@ if os.path.exists(f):
 cred = credentials.Certificate(os.path.join(BASE_DIR, config('PATH_TO_FCM_CREDS')))
 firebase_admin.initialize_app(cred)
 
-print("+++ SETTINGS-5-CACHE-COMMENTED +++")
+print("+++ SETTINGS-5-SENTRY-SETUP +++")
+
+
+if config('USE_SENTRY') == 'True':
+    sentry_sdk.init(
+        dsn=config('DSN'),
+        integrations=[DjangoIntegration()],
+
+        # Set traces_sample_rate to 1.0 to capture 100%
+        # of transactions for performance monitoring.
+        # We recommend adjusting this value in production.
+        traces_sample_rate=1.0,
+
+        # If you wish to associate users to errors (assuming you are using
+        # django.contrib.auth) you may enable sending PII data.
+        send_default_pii=True
+    )

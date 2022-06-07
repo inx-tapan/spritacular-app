@@ -2,6 +2,7 @@ import datetime
 import json
 
 import pytz
+import pandas as pd
 from django.core.cache import cache
 from django.db.models import Q, Prefetch, OuterRef, Exists, Count
 from django.http import HttpResponse
@@ -19,7 +20,7 @@ from .models import (Observation, Category, ObservationComment, ObservationLike,
                      VerifyObservation, ObservationReasonForReject, ObservationImageMapping, ObservationCategoryMapping)
 from constants import NOT_FOUND, OBS_FORM_SUCCESS, SOMETHING_WENT_WRONG
 from rest_framework.pagination import PageNumberPagination
-import pandas as pd
+from sentry_sdk import capture_exception
 
 
 def set_or_update_cache(cache_obs_dict, observation_filter, observation_cache_common):
@@ -161,7 +162,8 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         try:
             obs_obj = Observation.objects.get(pk=kwargs.get('pk'), user=request.user, is_submit=False)
-        except Observation.DoesNotExist:
+        except Observation.DoesNotExist as e:
+            capture_exception(e)
             return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         data = json.loads(request.data['data'])
@@ -214,7 +216,8 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
             if not obs_obj:
                 raise Observation.DoesNotExist("Not found.")
-        except Observation.DoesNotExist:
+        except Observation.DoesNotExist as e:
+            capture_exception(e)
             return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         serializer = self.serializer_class(obs_obj, context={'user_observation_collection': True, 'request': request})
@@ -282,7 +285,8 @@ class ObservationImageCheck(APIView):
     def post(self, request, *args, **kwargs):
         try:
             obs_obj = Observation.objects.get(pk=kwargs.get('pk'), user_id=request.user.id)
-        except Observation.DoesNotExist:
+        except Observation.DoesNotExist as e:
+            capture_exception(e)
             return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         image_data = []
@@ -512,7 +516,8 @@ class ObservationVoteViewSet(APIView):
         data = request.data
         try:
             observation_obj = Observation.objects.get(id=observation_id)
-        except Observation.DoesNotExist:
+        except Observation.DoesNotExist as e:
+            capture_exception(e)
             return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         is_status_change = False
@@ -552,7 +557,8 @@ class ObservationVerifyViewSet(APIView):
         data = request.data
         try:
             observation_obj = Observation.objects.get(id=observation_id)
-        except Observation.DoesNotExist:
+        except Observation.DoesNotExist as e:
+            capture_exception(e)
             return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
 
         if data.get('name') == "APPROVE":

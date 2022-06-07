@@ -10,6 +10,8 @@ from django.contrib.auth.password_validation import validate_password
 
 from .models import User, CameraSetting
 
+from sentry_sdk import capture_exception
+
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
@@ -21,7 +23,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         }
         try:
             self.user = User.objects.get(email__iexact=authenticate_kwargs["email"])
-        except User.DoesNotExist:
+        except User.DoesNotExist as e:
+            capture_exception(e)
             raise serializers.ValidationError({'detail': constants.NO_ACCOUNT}, code=401)
         if not self.user.check_password(authenticate_kwargs["password"]):
             raise serializers.ValidationError({'detail': constants.NO_ACCOUNT}, code=401)
@@ -136,6 +139,7 @@ class ChangePasswordSerializer(serializers.Serializer):
             try:
                 validate_password(password=new_password, user=user)
             except Exception as e:
+                capture_exception(e)
                 raise serializers.ValidationError({'details': e.messages}, code=400)
             if new_password == confirm_password:
                 user.set_password(new_password)

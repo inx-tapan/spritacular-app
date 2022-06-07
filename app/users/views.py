@@ -15,6 +15,8 @@ from .models import User, CameraSetting
 from .serializers import UserRegisterSerializer, ChangePasswordSerializer, CameraSettingSerializer
 from .permissions import IsOwnerOrAdmin
 
+from sentry_sdk import capture_exception
+
 
 class RootView(APIView):
     def get(self, request):
@@ -141,7 +143,8 @@ class CameraSettingsApiView(viewsets.ModelViewSet):
         """
         try:
             return CameraSetting.objects.get(user_id=self.request.user.id, is_profile_camera_settings=True)
-        except CameraSetting.DoesNotExist:
+        except CameraSetting.DoesNotExist as e:
+            capture_exception(e)
             raise Http404
         except CameraSetting.MultipleObjectsReturned:
             return CameraSetting.objects.filter(user_id=self.request.user.id, is_profile_camera_settings=True).last()
