@@ -11,6 +11,10 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
 import os
+import logging
+
+from logging import handlers
+
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
@@ -309,20 +313,38 @@ if config('USE_SENTRY') == 'True':
 
 
 # Logging configuration
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'detail': {'format': '%(asctime)s : %(levelname)s : %(message)s'}
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'detail'
-        },
-    },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
-    },
-}
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'formatters': {
+#         'detail': {'format': '%(asctime)s : %(levelname)s : %(message)s'}
+#     },
+#     'handlers': {
+#         'console': {
+#             'class': 'logging.StreamHandler',
+#             'formatter': 'detail'
+#         },
+#     },
+#     'root': {
+#         'handlers': ['console'],
+#         'level': 'INFO',
+#     },
+# }
+
+# create log directory
+if not os.path.exists(os.path.join(BASE_DIR, 'app_logs')):
+    os.makedirs(os.path.join(BASE_DIR, 'app_logs'))
+
+log = logging.getLogger('')
+log.setLevel(logging.INFO)
+
+boto_logger = logging.getLogger('botocore')
+boto_logger.setLevel(logging.DEBUG)
+
+format = logging.Formatter(
+    "%(levelname)s\n" "%(asctime)s\n" "%(pathname)s\n" "%(message)s\n" "===============================")
+
+fh = handlers.TimedRotatingFileHandler(os.path.join(BASE_DIR, 'app_logs/debug.log'), backupCount=15, when='D')
+fh.setFormatter(format)
+log.addHandler(fh)
+

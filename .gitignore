@@ -20,3 +20,4 @@ app/celerybeat-schedule
 app/quiz_data.xlsx
 
 app/test.jpg
+app/app_logs
