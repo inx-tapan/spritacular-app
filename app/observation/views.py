@@ -345,6 +345,10 @@ class ObservationLikeViewSet(APIView):
 
 
 class ObservationWatchCountViewSet(APIView):
+    """
+    observation watch count api
+    storing user observation mapping for watch count.
+    """
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
@@ -516,6 +520,10 @@ class ObservationVerifyViewSet(APIView):
 
 
 class ObservationDashboardViewSet(viewsets.ModelViewSet):
+    """
+    observation dashboard api.
+    accessible by admin only, for approving and rejecting observations.
+    """
     permission_classes = (IsAuthenticated, IsAdmin)
     serializer_class = ObservationSerializer
     pagination_class = CustomCursorPagination
@@ -574,6 +582,10 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
 
 
 class GenerateObservationCSVViewSet(APIView):
+    """
+    Generate observation data in csv api
+    storing all selected observation data in csv file.
+    """
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
