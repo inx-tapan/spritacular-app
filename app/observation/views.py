@@ -4,7 +4,6 @@ import logging
 
 import pytz
 import pandas as pd
-from django.core.cache import cache
 from django.db.models import Q, Prefetch, OuterRef, Exists, Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -20,33 +19,16 @@ from users.permissions import IsAdminOrTrained, IsAdmin
 from .models import (Observation, Category, ObservationComment, ObservationLike, ObservationWatchCount,
                      VerifyObservation, ObservationReasonForReject, ObservationImageMapping, ObservationCategoryMapping)
 from constants import NOT_FOUND, OBS_FORM_SUCCESS, SOMETHING_WENT_WRONG
-from rest_framework.pagination import PageNumberPagination
+from rest_framework.pagination import PageNumberPagination, CursorPagination
 from sentry_sdk import capture_exception
 
 logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def set_or_update_cache(cache_obs_dict, observation_filter, observation_cache_common):
-    """
-    function to set or update/override existing cache
-    :param cache_obs_dict:
-    :param observation_filter:
-    :param observation_cache_common:
-    :return: observation_filter for pagination
-    """
-    if not cache_obs_dict:
-        print("cache set")
-        cache.set('common_observation_cache_data', {})
-
-    cache_obs_dict = cache.get('common_observation_cache_data')
-
-    for obs_obj in observation_filter:
-        cache_obs_dict[obs_obj.id] = obs_obj
-
-    cache.set('common_observation_cache_data', cache_obs_dict, timeout=3600)
-    observation_filter += observation_cache_common
-    return observation_filter
+class CustomCursorPagination(CursorPagination):
+    page_size = 10
+    ordering = '-id'
 
 
 # class ImageMetadataViewSet(APIView):
@@ -61,27 +43,30 @@ def set_or_update_cache(cache_obs_dict, observation_filter, observation_cache_co
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
+    """
+    Category list api for getting all category name and id.
+    """
     queryset = Category.objects.all()
 
     def list(self, request, *args, **kwargs):
-        if not cache.get('category_list'):
-            data = []
-            for tle in self.queryset:
-                category_details = {
-                    'id': tle.pk,
-                    'name': tle.title
-                }
-                data.append(category_details)
-            print("--category list cache set--")
-            cache.set('category_list', data, timeout=18000)
-        else:
-            print("--ALL CATEGORY LIST FROM CACHE--")
-            data = cache.get('category_list')
+        data = []
+        for tle in self.queryset:
+            category_details = {
+                'id': tle.pk,
+                'name': tle.title
+            }
+            data.append(category_details)
 
         return Response(data, status=status.HTTP_200_OK)
 
 
 class HomeViewSet(ListAPIView):
+    """
+    Homepage api
+    for getting latest 4 verified observation,
+    volunteers, observation count,
+    country count where observation are captured.
+    """
     serializer_class = ObservationSerializer
 
     def get(self, request, *args, **kwargs):
@@ -131,6 +116,7 @@ class HomeViewSet(ListAPIView):
 class UploadObservationViewSet(viewsets.ModelViewSet):
     """
     CRUD operations for observations
+    create, update, retrieve and user created observations.
     """
     serializer_class = ObservationSerializer
     permission_classes = (IsAuthenticated,)
@@ -285,6 +271,9 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
 
 class ObservationImageCheck(APIView):
+    """
+    Observation image check api for checking of the image processing is done or not.
+    """
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
@@ -324,13 +313,16 @@ class ObservationCommentViewSet(viewsets.ModelViewSet):
         serializer = self.serializer_class(data=data, context={'request': request})
         if serializer.is_valid(raise_exception=True):
             serializer.save()
-            cache.delete('common_observation_cache_data')
             return Response({'data': serializer.data, 'status': 1}, status=status.HTTP_201_CREATED)
 
         return Response({'detail': serializer.errors, 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ObservationLikeViewSet(APIView):
+    """
+    observation like api.
+    storing users and observation mapping for like count.
+    """
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
@@ -339,7 +331,6 @@ class ObservationLikeViewSet(APIView):
         if data.get('is_like') == '1':
             if ObservationLike.objects.filter(observation_id=kwargs.get('pk'), user=request.user).exists():
                 like_count = ObservationLike.objects.filter(observation_id=kwargs.get('pk')).count()
-                cache.delete('common_observation_cache_data')
                 return Response({'like_count': like_count, 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
 
             ObservationLike.objects.create(observation_id=kwargs.get('pk'), user=request.user)
@@ -350,7 +341,6 @@ class ObservationLikeViewSet(APIView):
             like_status = False
 
         like_count = ObservationLike.objects.filter(observation_id=kwargs.get('pk')).count()
-        cache.delete('common_observation_cache_data')
         return Response({'like_count': like_count, 'status': 1, 'like': like_status}, status=status.HTTP_200_OK)
 
 
@@ -364,7 +354,6 @@ class ObservationWatchCountViewSet(APIView):
 
         watch_count = ObservationWatchCount.objects.filter(observation_id=kwargs.get('pk')).count()
 
-        cache.delete('common_observation_cache_data')
         return Response({'watch_count': watch_count, 'status': 1}, status=status.HTTP_200_OK)
 
 
@@ -375,18 +364,6 @@ class ObservationGalleryViewSet(ListAPIView):
     pagination_class = PageNumberPagination
 
     def get_queryset(self, *args):
-        # return Observation.objects.filter(id__in=args[0]).order_by('-pk').distinct('id') \
-        #     .prefetch_related('user', 'camera', 'observationimagemapping_set',
-        #                       Prefetch('observationcategorymapping_set',
-        #                                queryset=ObservationCategoryMapping.objects.prefetch_related('category'))
-        #                       ,
-        #                       Prefetch('observationlike_set',
-        #                                queryset=ObservationLike.objects.all())
-        #                       ,
-        #                       Prefetch('observationwatchcount_set',
-        #                                queryset=ObservationWatchCount.objects.all())
-        #                       )
-
         return Observation.objects.all() \
             .exclude(Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')) \
             .order_by('-pk').distinct('id') \
@@ -414,61 +391,6 @@ class ObservationGalleryViewSet(ListAPIView):
             filters = filters & Q(is_verified=True)
         if data.get('status') == 'unverified':
             filters = filters & Q(is_verified=False)
-
-        # if request.user.is_authenticated and (request.user.is_trained or request.user.is_superuser):
-        #     required_observation_ids = set(Observation.objects.filter(filters).only('id').exclude(
-        #         Q(observationimagemapping__image=None) | Q(observationimagemapping__image='') |
-        #         Q(observationimagemapping__compressed_image=None) |
-        #         Q(observationimagemapping__compressed_image='')
-        #     ).values_list('id', flat=True))
-        # else:
-        #     required_observation_ids = set(
-        #         Observation.objects.filter(is_submit=True, is_verified=True).only('id').exclude(
-        #             Q(observationimagemapping__image=None) | Q(observationimagemapping__image='') |
-        #             Q(observationimagemapping__compressed_image=None) |
-        #             Q(observationimagemapping__compressed_image='')
-        #         ).values_list('id', flat=True))
-        #
-        # is_set_cache = False
-        #
-        # observation_cache_common = []
-        # cache_obs_dict = cache.get('common_observation_cache_data')
-        # diff_ids = set()
-        # if cache_obs_dict:
-        #     diff_ids = required_observation_ids - set(cache_obs_dict)
-        #     # collecting common observation objects
-        #     observation_cache_common = [
-        #         cache_obs_dict.get(i) for i in sorted(set(cache_obs_dict).intersection(required_observation_ids),
-        #                                               reverse=True)]
-        #
-        # if cache_obs_dict and not diff_ids:
-        #     print("ALL FROM CACHE")
-        #     observation_filter = observation_cache_common
-        #
-        # elif request.user.is_authenticated:
-        #     # Trained user can see both verified and unverified observation on gallery screen.
-        #     required_obs_ids = diff_ids if cache_obs_dict else required_observation_ids
-        #     is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
-        #     is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
-        #     is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
-        #
-        #     observation_filter = list(
-        #         self.get_queryset(required_obs_ids).filter(id__in=required_obs_ids).annotate(is_like=Exists(is_like),
-        #                                                                                      is_watch=Exists(is_watch),
-        #                                                                                      is_voted=Exists(is_voted)
-        #                                                                                      ))
-        #     is_set_cache = True
-        #
-        # else:
-        #     # For unauthenticated users
-        #     required_obs_ids = diff_ids if cache_obs_dict else required_observation_ids
-        #     observation_filter = list(self.get_queryset(required_obs_ids).filter(id__in=required_obs_ids))
-        #     is_set_cache = True
-        #
-        # if is_set_cache:
-        #     print("set cache")
-        #     # Set or update observation cache
-        #     observation_filter = set_or_update_cache(cache_obs_dict, observation_filter, observation_cache_common)
 
         if request.user.is_authenticated and (request.user.is_trained or request.user.is_superuser):
             # Trained user can see both verified and unverified observation on gallery screen.
@@ -546,7 +468,6 @@ class ObservationVoteViewSet(APIView):
             observation_obj.is_to_be_verify = True
             observation_obj.save(update_fields=['is_to_be_verify'])
 
-        cache.delete('common_observation_cache_data')
         return Response({'success': 'Successfully Voted.', 'status': 1}, status=status.HTTP_200_OK)
 
 
@@ -571,7 +492,6 @@ class ObservationVerifyViewSet(APIView):
             observation_obj.is_verified = True
             observation_obj.is_reject = False
             observation_obj.save(update_fields=['is_verified', 'is_reject'])
-            cache.delete('common_observation_cache_data')
 
             return Response({'success': 'Observation Approved.'}, status=status.HTTP_200_OK)
 
@@ -590,7 +510,6 @@ class ObservationVerifyViewSet(APIView):
                                                           additional_comment=reason_data.get('additional_comment',
                                                                                              None))
 
-            cache.delete('common_observation_cache_data')
             return Response({'success': 'Observation Rejected.'}, status=status.HTTP_200_OK)
 
         return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
@@ -599,7 +518,7 @@ class ObservationVerifyViewSet(APIView):
 class ObservationDashboardViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, IsAdmin)
     serializer_class = ObservationSerializer
-    pagination_class = PageNumberPagination
+    pagination_class = CustomCursorPagination
     queryset = Observation.objects.all()
 
     def create(self, request, *args, **kwargs):
@@ -621,65 +540,6 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
             filters = filters & Q(is_verified=False)
         if query_data.get('category'):
             filters = filters & Q(observationcategorymapping__category__title__iexact=query_data.get('category'))
-        if data.get('camera_type'):
-            filters = filters & Q(camera__camera_type__iexact=data.get('camera_type'))
-        if data.get('fps'):
-            filters = filters & Q(camera__fps__iexact=data.get('fps'))
-        if data.get('iso'):
-            filters = filters & Q(camera__iso__iexact=data.get('iso'))
-        # if data.get('fov'):
-        #     filters = filters & Q()
-        if data.get('shutter_speed'):
-            filters = filters & Q(camera__shutter_speed__iexact=data.get('shutter_speed'))
-
-        # get all required ids all api calls
-        # Excluding observations not having original image in .exclude()
-        # required_observation_ids = set(Observation.objects.filter(filters).only('id').exclude(
-        #     Q(observationimagemapping__image=None) | Q(observationimagemapping__image='') |
-        #     Q(observationimagemapping__compressed_image=None) |
-        #     Q(observationimagemapping__compressed_image='')
-        # ).values_list('id', flat=True))
-        #
-        # observation_cache_common = []
-        # cache_obs_dict = cache.get('common_observation_cache_data')
-        # diff_ids = set()
-        # if cache_obs_dict:
-        #     diff_ids = required_observation_ids - set(cache_obs_dict)
-        #     # collecting common observation objects
-        #     observation_cache_common = [
-        #         cache_obs_dict.get(i) for i in sorted(set(cache_obs_dict).intersection(required_observation_ids),
-        #                                               reverse=True)]
-        #
-        # if cache_obs_dict and not diff_ids:
-        #     print("ALL FROM CACHE")
-        #     observation_filter = observation_cache_common
-        #
-        # else:
-        #     required_obs_ids = diff_ids if cache_obs_dict else required_observation_ids
-        #
-        #     is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user).only('id')
-        #     is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user).only('id')
-        #     is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user).only('id')
-        #
-        #     observation_filter = list(
-        #         Observation.objects.filter(id__in=required_obs_ids).order_by('-pk')
-        #             .prefetch_related('user', 'camera', 'observationimagemapping_set',
-        #                               Prefetch('observationcategorymapping_set',
-        #                                        queryset=ObservationCategoryMapping.objects.prefetch_related(
-        #                                            'category'))
-        #                               ,
-        #                               Prefetch('observationlike_set',
-        #                                        queryset=ObservationLike.objects.all())
-        #                               ,
-        #                               Prefetch('observationwatchcount_set',
-        #                                        queryset=ObservationWatchCount.objects.all())
-        #                               ).annotate(is_like=Exists(is_like),
-        #                                          is_watch=Exists(is_watch),
-        #                                          is_voted=Exists(is_voted)
-        #                                          ))
-        #
-        #     # Set or update observation cache
-        #     observation_filter = set_or_update_cache(cache_obs_dict, observation_filter, observation_cache_common)
 
         is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
         is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
