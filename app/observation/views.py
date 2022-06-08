@@ -361,7 +361,7 @@ class ObservationGalleryViewSet(ListAPIView):
     """
     Observation gallery page api with paginated response.
     """
-    pagination_class = PageNumberPagination
+    pagination_class = CustomCursorPagination
 
     def get_queryset(self, *args):
         return Observation.objects.all() \
