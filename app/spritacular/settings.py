@@ -291,6 +291,7 @@ firebase_admin.initialize_app(cred)
 print("+++ SETTINGS-5-SENTRY-SETUP +++")
 
 
+# Sentry configuration
 if config('USE_SENTRY') == 'True':
     sentry_sdk.init(
         dsn=config('DSN'),
@@ -305,3 +306,23 @@ if config('USE_SENTRY') == 'True':
         # django.contrib.auth) you may enable sending PII data.
         send_default_pii=True
     )
+
+
+# Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'detail': {'format': '%(asctime)s : %(levelname)s : %(message)s'}
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'detail'
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+}

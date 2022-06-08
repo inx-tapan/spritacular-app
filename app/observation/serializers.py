@@ -202,7 +202,7 @@ class ObservationSerializer(serializers.ModelSerializer):
         if validated_data.get('image_type') == 3 and len(image_data) <= 3:
             camera_obj, observation = self.create_camera_observation(camera_data, validated_data, submit_flag)
 
-        for i, data in enumerate(image_data):
+        for data in image_data:
             if validated_data.get('image_type') != 3:
                 camera_obj, observation = self.create_camera_observation(camera_data, validated_data, submit_flag)
 
@@ -247,23 +247,8 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def create_camera_observation(camera_data, validated_data, submit_flag):
-        # if isinstance(camera_data, dict):
         camera_obj = CameraSetting.objects.create(user=validated_data.get('user'),
-                                                  camera_type=camera_data.get('camera_type'),
-                                                  iso=camera_data.get('iso'),
-                                                  shutter_speed=camera_data.get('shutter_speed'),
-                                                  fps=camera_data.get('fps'),
-                                                  lens_type=camera_data.get('lens_type'),
-                                                  focal_length=camera_data.get('focal_length'),
-                                                  aperture=camera_data.get('aperture', 'None'),
-                                                  question_field_one=camera_data.get('question_field_one'),
-                                                  question_field_two=camera_data.get('question_field_two'),
-                                                  is_profile_camera_settings=False)
-        # else:
-        #     try:
-        #         camera_obj = CameraSetting.objects.get(pk=camera_data)
-        #     except CameraSetting.DoesNotExist:
-        #         camera_obj = None
+                                                  is_profile_camera_settings=False, **camera_data)
 
         observation = Observation.objects.create(**validated_data, is_submit=submit_flag, camera=camera_obj)
 

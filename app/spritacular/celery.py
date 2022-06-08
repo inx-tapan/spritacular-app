@@ -14,7 +14,7 @@ app.conf.beat_schedule = {
         # Scheduler Name
         'delete_blog_images': {
             'task': 'delete_unpublished_images',
-            'schedule': crontab(minute="*/5"),  # 5 minutes
+            'schedule': crontab(hour="*/12"),  # Every 12 hours
         },
 }
 

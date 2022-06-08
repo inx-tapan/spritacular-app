@@ -1,5 +1,6 @@
 import datetime
 import json
+import logging
 
 import pytz
 import pandas as pd
@@ -21,6 +22,9 @@ from .models import (Observation, Category, ObservationComment, ObservationLike,
 from constants import NOT_FOUND, OBS_FORM_SUCCESS, SOMETHING_WENT_WRONG
 from rest_framework.pagination import PageNumberPagination
 from sentry_sdk import capture_exception
+
+logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def set_or_update_cache(cache_obs_dict, observation_filter, observation_cache_common):
@@ -133,6 +137,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         data = json.loads(request.data['data'])
+        print(data)
 
         for i in request.FILES:
             data['map_data'][int(i.split('_')[-1])]['image'] = request.FILES[i]
@@ -142,6 +147,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         obs_context = {'request': request, 'observation_settings': True}
         if 'is_draft' in data:
             # Adding is_draft for eliminating validations check.
+            logger.info('DRAFT')
             obs_context['is_draft'] = True
 
         # if isinstance(camera_data, dict):
@@ -153,7 +159,6 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         if observation_serializer.is_valid(raise_exception=True) and camera_serializer.is_valid(
                 raise_exception=True):
             observation_serializer.save()
-            cache.delete('common_observation_cache_data')
             return Response(OBS_FORM_SUCCESS, status=status.HTTP_201_CREATED)
 
         return Response({'observation_errors': observation_serializer.errors,
@@ -175,8 +180,8 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
         obs_context = {'request': request, 'observation_settings': True}
         if 'is_draft' in data:
-            print("yes")
             # Adding is_draft for eliminating validations check.
+            logger.info('DRAFT')
             obs_context['is_draft'] = True
 
         camera_serializer = CameraSettingSerializer(instance=obs_obj.camera, data=camera_data, context=obs_context)
