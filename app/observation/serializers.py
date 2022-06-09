@@ -249,7 +249,16 @@ class ObservationSerializer(serializers.ModelSerializer):
     @staticmethod
     def create_camera_observation(camera_data, validated_data, submit_flag):
         camera_obj = CameraSetting.objects.create(user=validated_data.get('user'),
-                                                  is_profile_camera_settings=False, **camera_data)
+                                                  camera_type=camera_data.get('camera_type'),
+                                                  iso=camera_data.get('iso'),
+                                                  shutter_speed=camera_data.get('shutter_speed'),
+                                                  fps=camera_data.get('fps'),
+                                                  lens_type=camera_data.get('lens_type'),
+                                                  focal_length=camera_data.get('focal_length'),
+                                                  aperture=camera_data.get('aperture', 'None'),
+                                                  question_field_one=camera_data.get('question_field_one'),
+                                                  question_field_two=camera_data.get('question_field_two'),
+                                                  is_profile_camera_settings=False)
 
         observation = Observation.objects.create(**validated_data, is_submit=submit_flag, camera=camera_obj)
 
