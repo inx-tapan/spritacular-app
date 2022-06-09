@@ -278,7 +278,7 @@ class ObservationImageCheck(APIView):
 
     def post(self, request, *args, **kwargs):
         try:
-            obs_obj = Observation.objects.get(pk=kwargs.get('pk'), user_id=request.user.id)
+            obs_obj = Observation.objects.get(pk=kwargs.get('pk'))
         except Observation.DoesNotExist as e:
             capture_exception(e)
             return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
