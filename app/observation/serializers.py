@@ -232,7 +232,8 @@ class ObservationSerializer(serializers.ModelSerializer):
                                                                        image_name=image_file_name)
 
             # obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
-            obs_image_map_obj.set_utc()
+            if obs_image_map_obj.obs_date and obs_image_map_obj.obs_time:
+                obs_image_map_obj.set_utc()
             get_original_image.delay(obs_image_map_obj.id)  # Calling celery task to save original image from local.
 
         return observation
@@ -298,7 +299,8 @@ class ObservationSerializer(serializers.ModelSerializer):
                 obs_map_data.image_name = image_file_name
                 obs_map_data.compressed_image = compressed_image
                 obs_map_data.save()
-                obs_map_data.set_utc()
+                if obs_map_data.obs_date and obs_map_data.obs_time:
+                    obs_map_data.set_utc()
                 get_original_image.delay(obs_map_data.id)  # Calling celery task to save original image from local.
 
         else:
@@ -314,7 +316,8 @@ class ObservationSerializer(serializers.ModelSerializer):
                 obs_image_map_obj = ObservationImageMapping.objects.create(**obs_map_data, observation=instance,
                                                                            compressed_image=compressed_image,
                                                                            image_name=image_file_name)
-                obs_image_map_obj.set_utc()
+                if obs_image_map_obj.obs_date and obs_image_map_obj.obs_time:
+                    obs_image_map_obj.set_utc()
                 get_original_image.delay(obs_image_map_obj.id)  # Calling celery task to save original image from local.
 
         return instance
