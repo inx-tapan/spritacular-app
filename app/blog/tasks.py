@@ -1,4 +1,6 @@
 from celery import shared_task
+from sentry_sdk import capture_exception
+
 from .models import BlogImageData
 
 
@@ -9,4 +11,5 @@ def delete_unpublished_images():
             if not img.is_published:
                 img.delete()
     except Exception as e:
+        capture_exception(e)
         print(f"----delete_unpublished_images tasks---- {e}")

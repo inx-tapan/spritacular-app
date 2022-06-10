@@ -1,7 +1,9 @@
+from django.conf.urls import url
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.static import serve
 from fcm_django.api.rest_framework import FCMDeviceAuthorizedViewSet
 from users.views import RootView
 
@@ -18,7 +20,8 @@ urlpatterns = [
     # Only allow creation of devices by authenticated users
     path('api/devices/', FCMDeviceAuthorizedViewSet.as_view({'post': 'create'}), name='create_fcm_device'),
     path('api/blog/', include('blog.urls')),
-    path('api/quiz/', include('quiz.urls'))
+    path('api/quiz/', include('quiz.urls')),
+    url(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT})
 ]
 
 if settings.DEBUG:

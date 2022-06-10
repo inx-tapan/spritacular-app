@@ -3,7 +3,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 from django.urls import path, include
-from .views import UserRegisterViewSet, ChangePasswordViewSet, LogoutViewSet, CameraSettingsApiView, \
+from .views import UserRegisterViewSet, ChangePasswordViewSet, CameraSettingsApiView, \
     CustomObtainTokenPairView, RootView
 
 # from rest_framework import routers
@@ -20,14 +20,12 @@ urlpatterns = [
     # User profile image upload or profile update
 
     path('user_profile/<int:pk>/',
-         UserRegisterViewSet.as_view({'patch': 'profile_update', 'get': 'retrieve', 'put': 'update_user_profile'}),
+         UserRegisterViewSet.as_view({'patch': 'profile_update', 'put': 'update_user_profile'}),
          name='profile_retrieve_update'),
     # Change Password
     path('change-password/<int:pk>/', ChangePasswordViewSet.as_view(), name='change-password'),
     # Password reset
     path('password_reset/', include('django_rest_passwordreset.urls', namespace='password_reset')),
-    # Logout
-    path('logout/', LogoutViewSet.as_view(), name='logout'),
     path('camera_setting/'
          , CameraSettingsApiView.as_view({'post': 'create', 'get': 'retrieve', 'patch': 'update'}),
          name='camera_setting'),

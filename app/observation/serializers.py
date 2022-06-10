@@ -109,9 +109,10 @@ class ObservationSerializer(serializers.ModelSerializer):
     def get_image(self, data):
         obj = data.observationimagemapping_set.all()
         serialize_data = ObservationImageSerializer(obj, many=True).data
-        for i in serialize_data:
-            i['category_map'] = {}
-            i['category_map']['category'] = [i.category.id for i in data.observationcategorymapping_set.all()]
+        for image_map_obj in serialize_data:
+            image_map_obj['category_map'] = {}
+            image_map_obj['category_map']['category'] = [
+                type_id.category.id for type_id in data.observationcategorymapping_set.all()]
         return serialize_data
 
     def get_user(self, data):
@@ -146,41 +147,41 @@ class ObservationSerializer(serializers.ModelSerializer):
         error_field = {}
         is_error_flag = False
         if self.context.get('is_draft') is None:
-            for count, i in enumerate(image_data):
+            for count, obs_data in enumerate(image_data):
                 error_field[count] = {}
-                if not i['category_map']['category']:
+                if not obs_data['category_map']['category']:
                     is_error_flag = True
                     error_field[count]['category'] = FIELD_REQUIRED.format("Category")
 
-                elif not i['location']:
+                elif not obs_data['location']:
                     is_error_flag = True
                     error_field[count]['location'] = FIELD_REQUIRED.format("Location")
 
-                elif not i['longitude']:
+                elif not obs_data['longitude']:
                     is_error_flag = True
                     error_field[count]['longitude'] = FIELD_REQUIRED.format("Longitude")
 
-                elif not i['latitude']:
+                elif not obs_data['latitude']:
                     is_error_flag = True
                     error_field[count]['latitude'] = FIELD_REQUIRED.format("Latitude")
 
-                elif not i['timezone']:
+                elif not obs_data['timezone']:
                     is_error_flag = True
                     error_field[count]['timezone'] = FIELD_REQUIRED.format("Timezone")
 
-                elif not i['obs_date']:
+                elif not obs_data['obs_date']:
                     is_error_flag = True
                     error_field[count]['obs_date'] = FIELD_REQUIRED.format("Observation date")
 
-                elif not i['obs_time']:
+                elif not obs_data['obs_time']:
                     is_error_flag = True
                     error_field[count]['obs_time'] = FIELD_REQUIRED.format("Observation time")
 
-                elif not i['azimuth']:
+                elif not obs_data['azimuth']:
                     is_error_flag = True
                     error_field[count]['azimuth'] = FIELD_REQUIRED.format("Azimuth")
 
-                elif (i['azimuth'] and i['azimuth'].isdigit()) and int(i['azimuth']) > 360:
+                elif (obs_data['azimuth'] and obs_data['azimuth'].isdigit()) and int(obs_data['azimuth']) > 360:
                     is_error_flag = True
                     error_field[count]['azimuth'] = 'Azimuth angle should not be more than 360°.'
 
@@ -201,19 +202,19 @@ class ObservationSerializer(serializers.ModelSerializer):
         if validated_data.get('image_type') == 3 and len(image_data) <= 3:
             camera_obj, observation = self.create_camera_observation(camera_data, validated_data, submit_flag)
 
-        for i, data in enumerate(image_data):
+        for data in image_data:
             if validated_data.get('image_type') != 3:
                 camera_obj, observation = self.create_camera_observation(camera_data, validated_data, submit_flag)
 
-            if image_data[i].get('category_map'):
-                category_data = image_data[i].pop('category_map')
+            if data.get('category_map'):
+                category_data = data.pop('category_map')
                 for tle in category_data['category']:
                     if not ObservationCategoryMapping.objects.filter(observation_id=observation.id,
                                                                      category=tle).exists():
                         ObservationCategoryMapping.objects.create(observation_id=observation.id, category=tle)
 
             # Image Compression
-            image_file = image_data[i].pop('image')
+            image_file = data.pop('image')
             # newfile_name = f"{uuid.uuid4()}.{image_file.name.split('.')[-1]}"  # creating unique file name
             #
             # # First saving original file locally.
@@ -225,13 +226,14 @@ class ObservationSerializer(serializers.ModelSerializer):
 
             image_file_name, compressed_image = compress_and_save_image_locally(image_file)  # Compression function call
 
-            obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i],
+            obs_image_map_obj = ObservationImageMapping.objects.create(**data,
                                                                        compressed_image=compressed_image,
                                                                        observation_id=observation.id,
                                                                        image_name=image_file_name)
 
             # obs_image_map_obj = ObservationImageMapping.objects.create(**image_data[i], observation_id=observation.id)
-            obs_image_map_obj.set_utc()
+            if obs_image_map_obj.obs_date and obs_image_map_obj.obs_time:
+                obs_image_map_obj.set_utc()
             get_original_image.delay(obs_image_map_obj.id)  # Calling celery task to save original image from local.
 
         return observation
@@ -246,7 +248,6 @@ class ObservationSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def create_camera_observation(camera_data, validated_data, submit_flag):
-        # if isinstance(camera_data, dict):
         camera_obj = CameraSetting.objects.create(user=validated_data.get('user'),
                                                   camera_type=camera_data.get('camera_type'),
                                                   iso=camera_data.get('iso'),
@@ -258,11 +259,6 @@ class ObservationSerializer(serializers.ModelSerializer):
                                                   question_field_one=camera_data.get('question_field_one'),
                                                   question_field_two=camera_data.get('question_field_two'),
                                                   is_profile_camera_settings=False)
-        # else:
-        #     try:
-        #         camera_obj = CameraSetting.objects.get(pk=camera_data)
-        #     except CameraSetting.DoesNotExist:
-        #         camera_obj = None
 
         observation = Observation.objects.create(**validated_data, is_submit=submit_flag, camera=camera_obj)
 
@@ -291,8 +287,8 @@ class ObservationSerializer(serializers.ModelSerializer):
             ObservationCategoryMapping.objects.create(observation_id=instance.id, category=tle)
 
         if validated_data.get('image_type') != 3:
-            map_obj = ObservationImageMapping.objects.filter(observation=instance).order_by('pk')
-            for i in map_obj:
+            obs_image_map_obj = ObservationImageMapping.objects.filter(observation=instance).order_by('pk')
+            for obs_map_data in obs_image_map_obj:
                 # i.image = image_data[0].get('image')
 
                 # Image Compression
@@ -300,35 +296,37 @@ class ObservationSerializer(serializers.ModelSerializer):
                 # Compression function call
                 image_file_name, compressed_image = compress_and_save_image_locally(image_file)
 
-                i.location = image_data[0].get('location')
-                i.timezone = image_data[0].get('timezone')
-                i.longitude = image_data[0].get('longitude')
-                i.latitude = image_data[0].get('latitude')
-                i.azimuth = image_data[0].get('azimuth')
-                i.obs_date = image_data[0].get('obs_date')
-                i.obs_time = image_data[0].get('obs_time')
-                i.is_precise_azimuth = image_data[0].get('is_precise_azimuth')
-                i.time_accuracy = image_data[0].get('time_accuracy')
-                i.image_name = image_file_name
-                i.compressed_image = compressed_image
-                i.save()
-                i.set_utc()
-                get_original_image.delay(i.id)  # Calling celery task to save original image from local.
+                obs_map_data.location = image_data[0].get('location')
+                obs_map_data.timezone = image_data[0].get('timezone')
+                obs_map_data.longitude = image_data[0].get('longitude')
+                obs_map_data.latitude = image_data[0].get('latitude')
+                obs_map_data.azimuth = image_data[0].get('azimuth')
+                obs_map_data.obs_date = image_data[0].get('obs_date')
+                obs_map_data.obs_time = image_data[0].get('obs_time')
+                obs_map_data.is_precise_azimuth = image_data[0].get('is_precise_azimuth')
+                obs_map_data.time_accuracy = image_data[0].get('time_accuracy')
+                obs_map_data.image_name = image_file_name
+                obs_map_data.compressed_image = compressed_image
+                obs_map_data.save()
+                if obs_map_data.obs_date and obs_map_data.obs_time:
+                    obs_map_data.set_utc()
+                get_original_image.delay(obs_map_data.id)  # Calling celery task to save original image from local.
 
         else:
             ObservationImageMapping.objects.filter(observation=instance).delete()
-            for i in image_data:
-                i.pop('category_map')
+            for obs_map_data in image_data:
+                obs_map_data.pop('category_map')
 
                 # Image Compression
-                image_file = i.pop('image')
+                image_file = obs_map_data.pop('image')
                 # Compression function call
                 image_file_name, compressed_image = compress_and_save_image_locally(image_file)
 
-                obs_image_map_obj = ObservationImageMapping.objects.create(**i, observation=instance,
+                obs_image_map_obj = ObservationImageMapping.objects.create(**obs_map_data, observation=instance,
                                                                            compressed_image=compressed_image,
                                                                            image_name=image_file_name)
-                obs_image_map_obj.set_utc()
+                if obs_image_map_obj.obs_date and obs_image_map_obj.obs_time:
+                    obs_image_map_obj.set_utc()
                 get_original_image.delay(obs_image_map_obj.id)  # Calling celery task to save original image from local.
 
         return instance

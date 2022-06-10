@@ -1,3 +1,5 @@
+from sentry_sdk import capture_exception
+
 import constants
 import json
 
@@ -34,7 +36,8 @@ class BlogViewSet(viewsets.ModelViewSet):
     def get_object(self, slug):
         try:
             return Blog.objects.get(slug__exact=slug)
-        except Blog.DoesNotExist:
+        except Blog.DoesNotExist as e:
+            capture_exception(e)
             return None
 
     def list(self, request, *args, **kwargs):
@@ -64,7 +67,7 @@ class BlogViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         if not request.data.get('article_type'):
             return Response({'detail': 'Article type not selected.', 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
-        if not request.data.get('thumbnail_image'):
+        if request.data.get('thumbnail_image') == 'null':
             return Response({'detail': 'Thumbnail image not provided.', 'status': 0},
                             status=status.HTTP_400_BAD_REQUEST)
         if int(request.data.get('article_type')) == 1 and not request.data.get('category'):
@@ -92,7 +95,7 @@ class BlogViewSet(viewsets.ModelViewSet):
         blog_obj.set_slug()
 
         for i in image_ids:
-            BlogImageData.objects.filter(id=i.get('id')).update(is_published=True)
+            BlogImageData.objects.filter(id=i.get('id')).update(is_published=True, blog=blog_obj)
 
         return Response(constants.BLOG_FORM_SUCCESS, status=status.HTTP_201_CREATED)
 
@@ -103,7 +106,7 @@ class BlogViewSet(viewsets.ModelViewSet):
             return Response(constants.NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
         if not request.data.get('article_type'):
             return Response({'detail': 'Article type not selected.', 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
-        if not request.data.get('thumbnail_image'):
+        if request.data.get('thumbnail_image') == 'null':
             return Response({'detail': 'Thumbnail image not provided.', 'status': 0},
                             status=status.HTTP_400_BAD_REQUEST)
         if int(request.data.get('article_type')) == 1 and not request.data.get('category'):
@@ -139,7 +142,13 @@ class BlogViewSet(viewsets.ModelViewSet):
         blog_obj.set_slug()
 
         for i in image_ids:
-            BlogImageData.objects.filter(id=i.get('id')).update(is_published=True)
+            BlogImageData.objects.filter(id=i.get('id')).update(is_published=True, blog=blog_obj)
+
+        blog_images = BlogImageData.objects.filter(blog=blog_obj)
+        for img in blog_images:
+            if not Blog.objects.filter(id=blog_obj.id, content__icontains=img.image_file.url).exists():
+                img.is_published = False
+                img.save(update_fields=['is_published'])
 
         return Response(constants.BLOG_FORM_SUCCESS, status=status.HTTP_200_OK)
 
@@ -171,7 +180,8 @@ class GetImageUrlViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         try:
             image_obj = BlogImageData.objects.get(pk=kwargs.get('pg'))
-        except BlogImageData.DoesNotExist:
+        except BlogImageData.DoesNotExist as e:
+            capture_exception(e)
             return Response(constants.NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         image_obj.delete()
