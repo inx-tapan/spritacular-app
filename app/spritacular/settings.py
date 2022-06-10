@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
+
 import os
 import logging
 
@@ -36,7 +37,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True if config('DEBUG', False) == 'True' else False
+DEBUG = config('DEBUG', False) == 'True'
 
 ALLOWED_HOSTS = ["*"]
 
@@ -105,10 +106,11 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://34.205.152.253:3000",
-    "https://dev.spritacular.org"
+    "https://dev.spritacular.org",
+    "https://spritacular.org"
 ]
 
-CSRF_TRUSTED_ORIGINS = ['https://api.spritacular.org', 'http://127.0.0.1:8000']
+CSRF_TRUSTED_ORIGINS = ['https://api.spritacular.org', 'http://127.0.0.1:8000', 'https://api.stage.spritacular.org']
 
 CORS_ALLOW_CREDENTIALS = True
 
