@@ -43,6 +43,7 @@ class Blog(BaseModel):
 
 
 class BlogImageData(models.Model):
+    blog = models.ForeignKey(Blog, null=True, blank=True, on_delete=models.CASCADE)
     image_file = models.FileField(upload_to='blog/blog_image')
     is_published = models.BooleanField(default=False)
 

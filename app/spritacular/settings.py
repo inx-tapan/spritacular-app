@@ -10,16 +10,22 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
+
 import os
+import logging
+
+from logging import handlers
+
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
 
 import firebase_admin
 from firebase_admin import credentials
-
-
 from firebase_admin import initialize_app
+
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -31,7 +37,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True if config('DEBUG', False) == 'True' else False
+DEBUG = config('DEBUG', False) == 'True'
 
 ALLOWED_HOSTS = ["*"]
 
@@ -64,6 +70,9 @@ INSTALLED_APPS = [
 
     # query debug
     'silk',
+
+    # django cleanup for image and file fields
+    'django_cleanup.apps.CleanupConfig',
 ]
 
 AUTH_USER_MODEL = 'users.User'
@@ -97,10 +106,11 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://34.205.152.253:3000",
-    "https://dev.spritacular.org"
+    "https://dev.spritacular.org",
+    "https://spritacular.org"
 ]
 
-CSRF_TRUSTED_ORIGINS = ['https://api.spritacular.org', 'http://127.0.0.1:8000']
+CSRF_TRUSTED_ORIGINS = ['https://api.spritacular.org', 'http://127.0.0.1:8000', 'https://api.stage.spritacular.org']
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -236,7 +246,7 @@ FRONTEND_URL = config('FRONTEND_URL')
 
 # settings related to redis
 # CACHE_TTL = 60 * 60  # Cache time to live is 60 minutes.
-
+#
 # CACHES = {
 #     "default": {
 #         "BACKEND": config('CACHE_BACKEND'),
@@ -284,4 +294,59 @@ if os.path.exists(f):
 cred = credentials.Certificate(os.path.join(BASE_DIR, config('PATH_TO_FCM_CREDS')))
 firebase_admin.initialize_app(cred)
 
-print("+++ SETTINGS-4-BLOG-UPDATE +++")
+print("+++ SETTINGS-JUNE-9 +++")
+
+
+# Sentry configuration
+if config('USE_SENTRY') == 'True':
+    sentry_sdk.init(
+        dsn=config('DSN'),
+        integrations=[DjangoIntegration()],
+
+        # Set traces_sample_rate to 1.0 to capture 100%
+        # of transactions for performance monitoring.
+        # We recommend adjusting this value in production.
+        traces_sample_rate=1.0,
+
+        # If you wish to associate users to errors (assuming you are using
+        # django.contrib.auth) you may enable sending PII data.
+        send_default_pii=True
+    )
+
+
+# Logging configuration
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'formatters': {
+#         'detail': {'format': '%(asctime)s : %(levelname)s : %(message)s'}
+#     },
+#     'handlers': {
+#         'console': {
+#             'class': 'logging.StreamHandler',
+#             'formatter': 'detail'
+#         },
+#     },
+#     'root': {
+#         'handlers': ['console'],
+#         'level': 'INFO',
+#     },
+# }
+
+# create log directory
+if not os.path.exists(os.path.join(BASE_DIR, 'app_logs')):
+    os.makedirs(os.path.join(BASE_DIR, 'app_logs'))
+
+log = logging.getLogger('')
+log.setLevel(logging.INFO)
+
+boto_logger = logging.getLogger('botocore')
+boto_logger.setLevel(logging.DEBUG)
+
+format = logging.Formatter(
+    "%(levelname)s\n" "%(asctime)s\n" "%(pathname)s\n" "%(message)s\n" "===============================")
+
+fh = handlers.TimedRotatingFileHandler(os.path.join(BASE_DIR, 'app_logs/debug.log'), backupCount=15, when='D')
+fh.setFormatter(format)
+log.addHandler(fh)
+

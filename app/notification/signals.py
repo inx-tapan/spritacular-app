@@ -53,4 +53,4 @@ def send_notification_user(title, data, notification, sent_at, user, from_user):
             print(f"Send Message-->{sm}")
         return True
     except Exception as e:
-        print("error", e)
+        print(f"send notification error->{e}")

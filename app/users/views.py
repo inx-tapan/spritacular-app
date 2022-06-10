@@ -7,7 +7,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .serializers import MyTokenObtainPairSerializer
@@ -15,6 +14,8 @@ from .serializers import MyTokenObtainPairSerializer
 from .models import User, CameraSetting
 from .serializers import UserRegisterSerializer, ChangePasswordSerializer, CameraSettingSerializer
 from .permissions import IsOwnerOrAdmin
+
+from sentry_sdk import capture_exception
 
 
 class RootView(APIView):
@@ -54,12 +55,6 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def retrieve(self, request, *args, **kwargs):
-        user = get_object_or_404(User, pk=self.kwargs['pk'])
-        self.check_object_permissions(request, user)
-        serializer = self.serializer_class(user)
-        return Response(serializer.data)
-
     def profile_update(self, request, pk=None):
         user = get_object_or_404(User, pk=pk)
         self.check_object_permissions(request, user)
@@ -67,12 +62,10 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
 
     def update_user_profile(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer_obj = self.serializer_class(instance, data=request.data,
-                                               context={'request': request, 'method': 'PUT'})
-        serializer_obj.is_valid(raise_exception=True)
-        # data = serializer_obj.update(instance, serializer_obj.validated_data)
-        serializer_obj.save()
-        return Response(serializer_obj.data, status=status.HTTP_200_OK)
+        serializer = self.serializer_class(instance, data=request.data, context={'request': request, 'method': 'PUT'})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def get_user_details(self, request, *args, **kwargs):
         user = request.user
@@ -121,11 +114,6 @@ class ChangePasswordViewSet(APIView):
     serializer_class = ChangePasswordSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
 
-    def get(self, request, pk=None):
-        user = get_object_or_404(User, pk=pk)
-        self.check_object_permissions(request, user)
-        return Response(f'Change password for user: {user.first_name} {user.last_name}')
-
     def put(self, request, pk=None):
         user = get_object_or_404(User, pk=pk)
         self.check_object_permissions(request, user)
@@ -133,33 +121,9 @@ class ChangePasswordViewSet(APIView):
         data['user'] = user
         serializer = self.serializer_class(data=data, context={"user": user})
         if serializer.is_valid():
-            # request.user.auth_token.delete()
-            # logout(request)
-            # ----- JWT
-            # refresh_token = request.data["refresh_token"]
-            # token = RefreshToken(refresh_token)
-            # token.blacklist()
             return Response({"Success": True, "message": constants.CHANGE_PASS_SUCCESS}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class LogoutViewSet(APIView):
-    """
-    Logout user viwset.
-    refresh token will be blacklisted once the user opt to logout.
-    """
-    permission_classes = (IsAuthenticated,)
-
-    def post(self, request):
-        try:
-            refresh_token = request.data["refresh_token"]
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-
-            return Response(status=status.HTTP_205_RESET_CONTENT)
-        except Exception:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 class CameraSettingsApiView(viewsets.ModelViewSet):
@@ -179,7 +143,8 @@ class CameraSettingsApiView(viewsets.ModelViewSet):
         """
         try:
             return CameraSetting.objects.get(user_id=self.request.user.id, is_profile_camera_settings=True)
-        except CameraSetting.DoesNotExist:
+        except CameraSetting.DoesNotExist as e:
+            capture_exception(e)
             raise Http404
         except CameraSetting.MultipleObjectsReturned:
             return CameraSetting.objects.filter(user_id=self.request.user.id, is_profile_camera_settings=True).last()

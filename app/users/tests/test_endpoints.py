@@ -147,5 +147,13 @@ class TestEndPoints(TestSetUp):
         response = self.client.patch(reverse('camera_setting'), new_data, format='json')
         self.assertEqual(response.status_code, 200)
 
+    def test_get_user_details(self):
+        """
+        test for get user details
+        """
+        user_id = self.get_logged_in_user()
+        response = self.client.get(reverse('user_details'), format='json')
+        self.assertEqual(response.status_code, 200)
+
 
 

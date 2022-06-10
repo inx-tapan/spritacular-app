@@ -19,6 +19,7 @@ class UserNotificationViewSet(ListAPIView):
     """
     User notification api.
     """
+    permission_classes = (IsAuthenticated,)
     pagination_class = NotificationPagination
     queryset = UserNotification.objects.all()
 

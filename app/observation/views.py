@@ -1,7 +1,10 @@
 import datetime
 import json
+import logging
 
-from django.db.models import Q, Prefetch, OuterRef, Exists
+import pytz
+import pandas as pd
+from django.db.models import Q, Prefetch, OuterRef, Exists, Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework.generics import ListAPIView
@@ -16,8 +19,16 @@ from users.permissions import IsAdminOrTrained, IsAdmin
 from .models import (Observation, Category, ObservationComment, ObservationLike, ObservationWatchCount,
                      VerifyObservation, ObservationReasonForReject, ObservationImageMapping, ObservationCategoryMapping)
 from constants import NOT_FOUND, OBS_FORM_SUCCESS, SOMETHING_WENT_WRONG
-from rest_framework.pagination import PageNumberPagination
-import pandas as pd
+from rest_framework.pagination import PageNumberPagination, CursorPagination
+from sentry_sdk import capture_exception
+
+logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+class CustomCursorPagination(CursorPagination):
+    page_size = 10
+    ordering = '-id'
 
 
 # class ImageMetadataViewSet(APIView):
@@ -32,14 +43,17 @@ import pandas as pd
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
+    """
+    Category list api for getting all category name and id.
+    """
     queryset = Category.objects.all()
 
     def list(self, request, *args, **kwargs):
         data = []
-        for i in self.queryset:
+        for tle in self.queryset:
             category_details = {
-                'id': i.pk,
-                'name': i.title
+                'id': tle.pk,
+                'name': tle.title
             }
             data.append(category_details)
 
@@ -47,6 +61,12 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 
 class HomeViewSet(ListAPIView):
+    """
+    Homepage api
+    for getting latest 4 verified observation,
+    volunteers, observation count,
+    country count where observation are captured.
+    """
     serializer_class = ObservationSerializer
 
     def get(self, request, *args, **kwargs):
@@ -73,30 +93,37 @@ class HomeViewSet(ListAPIView):
                                                             queryset=ObservationWatchCount.objects.all())
                                                    )[:4]
 
-        observation_count = Observation.objects.filter().count()
-        observation_country_count = Observation.objects.filter().distinct('observationimagemapping__country_code'
-                                                                          ).count()
-        observation_user_count = Observation.objects.filter().distinct('user_id').count()
+        observation_counts = Observation.objects.aggregate(
+            self_count=Count('pk', distinct=True),
+            country_count=Count('observationimagemapping__country_code', distinct=True),
+            user_count=Count('user', distinct=True)
+        )
+
+        # observation_count = Observation.objects.filter().count()
+        # observation_country_count = Observation.objects.distinct('observationimagemapping__country_code')
+        # observation_user_count = Observation.objects.filter().distinct('user_id').count()
 
         serializer = self.serializer_class(latest_observation, many=True,
                                            context={'user_observation_collection': True, 'request': request})
 
         return Response({'data': {'latest_observation': serializer.data,
-                                  'observation_count': observation_count,
-                                  'observation_country_count': observation_country_count,
-                                  'observation_user_count': observation_user_count}},
+                                  'observation_count': observation_counts['self_count'],
+                                  'observation_country_count': observation_counts['country_count'],
+                                  'observation_user_count': observation_counts['user_count']}},
                         status=status.HTTP_200_OK)
 
 
 class UploadObservationViewSet(viewsets.ModelViewSet):
     """
     CRUD operations for observations
+    create, update, retrieve and user created observations.
     """
     serializer_class = ObservationSerializer
     permission_classes = (IsAuthenticated,)
 
     def create(self, request, *args, **kwargs):
         data = json.loads(request.data['data'])
+        print(data)
 
         for i in request.FILES:
             data['map_data'][int(i.split('_')[-1])]['image'] = request.FILES[i]
@@ -106,6 +133,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         obs_context = {'request': request, 'observation_settings': True}
         if 'is_draft' in data:
             # Adding is_draft for eliminating validations check.
+            logger.info('DRAFT')
             obs_context['is_draft'] = True
 
         # if isinstance(camera_data, dict):
@@ -117,7 +145,6 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         if observation_serializer.is_valid(raise_exception=True) and camera_serializer.is_valid(
                 raise_exception=True):
             observation_serializer.save()
-
             return Response(OBS_FORM_SUCCESS, status=status.HTTP_201_CREATED)
 
         return Response({'observation_errors': observation_serializer.errors,
@@ -126,20 +153,21 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         try:
             obs_obj = Observation.objects.get(pk=kwargs.get('pk'), user=request.user, is_submit=False)
-        except Observation.DoesNotExist:
+        except Observation.DoesNotExist as e:
+            capture_exception(e)
             return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         data = json.loads(request.data['data'])
 
-        for i in request.FILES:
-            data['map_data'][int(i.split('_')[-1])]['image'] = request.FILES[i]
+        for file in request.FILES:
+            data['map_data'][int(file.split('_')[-1])]['image'] = request.FILES[file]
 
         camera_data = data.pop('camera')
 
         obs_context = {'request': request, 'observation_settings': True}
         if 'is_draft' in data:
-            print("yes")
             # Adding is_draft for eliminating validations check.
+            logger.info('DRAFT')
             obs_context['is_draft'] = True
 
         camera_serializer = CameraSettingSerializer(instance=obs_obj.camera, data=camera_data, context=obs_context)
@@ -157,8 +185,30 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         try:
-            obs_obj = Observation.objects.get(pk=kwargs.get('pk'), user=request.user, is_submit=False)
-        except Observation.DoesNotExist:
+            # obs_obj = Observation.objects.get(pk=kwargs.get('pk'), user=request.user, is_submit=False)
+            is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
+            is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
+            is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
+
+            obs_obj = Observation.objects.filter(pk=kwargs.get('pk'), user=request.user, is_submit=False) \
+                .prefetch_related('user', 'camera', 'observationimagemapping_set',
+                                  Prefetch('observationcategorymapping_set',
+                                           queryset=ObservationCategoryMapping.objects.prefetch_related('category'))
+                                  ,
+                                  Prefetch('observationlike_set',
+                                           queryset=ObservationLike.objects.all())
+                                  ,
+                                  Prefetch('observationwatchcount_set',
+                                           queryset=ObservationWatchCount.objects.all())
+                                  ).annotate(is_like=Exists(is_like),
+                                             is_watch=Exists(is_watch),
+                                             is_voted=Exists(is_voted)
+                                             ).first()
+
+            if not obs_obj:
+                raise Observation.DoesNotExist("Not found.")
+        except Observation.DoesNotExist as e:
+            capture_exception(e)
             return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         serializer = self.serializer_class(obs_obj, context={'user_observation_collection': True, 'request': request})
@@ -187,8 +237,7 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
         is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
         is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
-        observation_filter = Observation.objects.filter(filters). \
-            exclude(Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')) \
+        observation_filter = Observation.objects.filter(filters) \
             .order_by('-pk').distinct('id') \
             .prefetch_related('user', 'camera', 'observationimagemapping_set',
                               Prefetch('observationcategorymapping_set',
@@ -222,12 +271,16 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
 
 class ObservationImageCheck(APIView):
+    """
+    Observation image check api for checking of the image processing is done or not.
+    """
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
         try:
-            obs_obj = Observation.objects.get(pk=kwargs.get('pk'), user_id=request.user.id)
-        except Observation.DoesNotExist:
+            obs_obj = Observation.objects.get(pk=kwargs.get('pk'))
+        except Observation.DoesNotExist as e:
+            capture_exception(e)
             return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         image_data = []
@@ -242,7 +295,10 @@ class ObservationCommentViewSet(viewsets.ModelViewSet):
     CRUD operations for observation comments
     """
     serializer_class = ObservationCommentSerializer
-    permission_classes = (IsAuthenticated,)
+
+    def get_permissions(self):
+        permission_classes = (IsAuthenticated,) if self.action == 'post' else []
+        return [permission() for permission in permission_classes]
 
     def list(self, request, *args, **kwargs):
         observation = get_object_or_404(Observation, pk=kwargs.get('pk'))
@@ -263,6 +319,10 @@ class ObservationCommentViewSet(viewsets.ModelViewSet):
 
 
 class ObservationLikeViewSet(APIView):
+    """
+    observation like api.
+    storing users and observation mapping for like count.
+    """
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
@@ -285,6 +345,10 @@ class ObservationLikeViewSet(APIView):
 
 
 class ObservationWatchCountViewSet(APIView):
+    """
+    observation watch count api
+    storing user observation mapping for watch count.
+    """
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
@@ -301,9 +365,9 @@ class ObservationGalleryViewSet(ListAPIView):
     """
     Observation gallery page api with paginated response.
     """
-    pagination_class = PageNumberPagination
+    pagination_class = CustomCursorPagination
 
-    def get_queryset(self):
+    def get_queryset(self, *args):
         return Observation.objects.all() \
             .exclude(Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')) \
             .order_by('-pk').distinct('id') \
@@ -353,7 +417,7 @@ class ObservationGalleryViewSet(ListAPIView):
                 is_like=Exists(is_like),
                 is_watch=Exists(is_watch),
                 is_voted=Exists(is_voted)
-                )
+            )
 
         else:
             # For unauthenticated users
@@ -380,24 +444,25 @@ class ObservationVoteViewSet(APIView):
 
     def post(self, request, *args, **kwargs):
         observation_id = kwargs.get('pk')
-        user = request.user
         data = request.data
         try:
             observation_obj = Observation.objects.get(id=observation_id)
-        except Observation.DoesNotExist:
+        except Observation.DoesNotExist as e:
+            capture_exception(e)
             return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         is_status_change = False
-        for i in data.get('votes'):
-            verify_obs_obj = VerifyObservation.objects.create(observation_id=observation_id, user=user,
-                                                              category_id=i.get("category_id"), vote=i.get("vote"))
+        for user_vote in data.get('votes'):
+            verify_obs_obj = VerifyObservation.objects.create(observation_id=observation_id, user=request.user,
+                                                              category_id=user_vote.get("category_id"),
+                                                              vote=user_vote.get("vote"))
 
             if verify_obs_obj.user.is_superuser and verify_obs_obj.vote:
                 # If an admin votes yes on any category of the observation it will send for verification.
                 is_status_change = True
 
             if VerifyObservation.objects.filter(observation_id=observation_id,
-                                                category_id=i.get("category_id"), vote=True).count() > 3:
+                                                category_id=user_vote.get("category_id"), vote=True).count() > 3:
                 # If any category of the observation have more than 3 yes votes it will send for verification.
                 is_status_change = True
 
@@ -422,7 +487,8 @@ class ObservationVerifyViewSet(APIView):
         data = request.data
         try:
             observation_obj = Observation.objects.get(id=observation_id)
-        except Observation.DoesNotExist:
+        except Observation.DoesNotExist as e:
+            capture_exception(e)
             return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
 
         if data.get('name') == "APPROVE":
@@ -454,9 +520,13 @@ class ObservationVerifyViewSet(APIView):
 
 
 class ObservationDashboardViewSet(viewsets.ModelViewSet):
+    """
+    observation dashboard api.
+    accessible by admin only, for approving and rejecting observations.
+    """
     permission_classes = (IsAuthenticated, IsAdmin)
     serializer_class = ObservationSerializer
-    pagination_class = PageNumberPagination
+    pagination_class = CustomCursorPagination
     queryset = Observation.objects.all()
 
     def create(self, request, *args, **kwargs):
@@ -465,10 +535,10 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
 
         filters = Q(is_submit=True)
         if data.get('from_obs_data'):
-            date_time_obj = datetime.datetime.strptime(data.get('from_obs_data'), "%d/%m/%Y %H:%M")
+            date_time_obj = pytz.utc.localize(datetime.datetime.strptime(data.get('from_obs_data'), "%d/%m/%Y %H:%M"))
             filters = filters & Q(observationimagemapping__obs_date_time_as_per_utc__gte=date_time_obj)
         if data.get('to_obs_data'):
-            date_time_obj = datetime.datetime.strptime(data.get('to_obs_data'), "%d/%m/%Y %H:%M")
+            date_time_obj = pytz.utc.localize(datetime.datetime.strptime(data.get('to_obs_data'), "%d/%m/%Y %H:%M"))
             filters = filters & Q(observationimagemapping__obs_date_time_as_per_utc__lte=date_time_obj)
         if query_data.get('country'):
             filters = filters & Q(observationimagemapping__country_code__iexact=query_data.get('country'))
@@ -478,28 +548,13 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
             filters = filters & Q(is_verified=False)
         if query_data.get('category'):
             filters = filters & Q(observationcategorymapping__category__title__iexact=query_data.get('category'))
-        if data.get('camera_type'):
-            filters = filters & Q(camera__camera_type__iexact=data.get('camera_type'))
-        if data.get('fps'):
-            filters = filters & Q(camera__fps__iexact=data.get('fps'))
-        if data.get('iso'):
-            filters = filters & Q(camera__iso__iexact=data.get('iso'))
-        # if data.get('fov'):
-        #     filters = filters & Q()
-        if data.get('shutter_speed'):
-            filters = filters & Q(camera__shutter_speed__iexact=data.get('shutter_speed'))
-
-        # observation_filter = Observation.objects.filter(filters).exclude(Q(observationimagemapping__image=None) |
-        #                                                                  Q(observationimagemapping__image='')
-        #                                                                  ).order_by('-pk').distinct('id')
 
         is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
         is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
         is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
 
         observation_filter = Observation.objects.filter(filters). \
-            exclude(Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')) \
-            .order_by('-pk').distinct('id') \
+            exclude(Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')).order_by('-pk') \
             .prefetch_related('user', 'camera', 'observationimagemapping_set',
                               Prefetch('observationcategorymapping_set',
                                        queryset=ObservationCategoryMapping.objects.prefetch_related('category'))
@@ -527,6 +582,10 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
 
 
 class GenerateObservationCSVViewSet(APIView):
+    """
+    Generate observation data in csv api
+    storing all selected observation data in csv file.
+    """
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
