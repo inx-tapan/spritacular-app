@@ -11,6 +11,7 @@ class ObservationAdmin(admin.ModelAdmin):
     """
     list_display = ('user', 'is_submit', 'is_verified', 'is_reject')
     search_fields = ('user__first_name', 'user__last_name', 'user__email', 'is_submit', 'is_verified', 'is_reject')
+    list_filter = ('is_submit', 'is_verified', 'is_reject')
 
 
 @admin.register(ObservationImageMapping)
