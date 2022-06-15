@@ -75,7 +75,7 @@ class HomeViewSet(ListAPIView):
         #                                                 observationimagemapping__compressed_image__isnull=False
         #                                                 ).order_by('-pk').distinct('pk')[:4]
 
-        latest_observation = Observation.objects.filter(is_verified=True) \
+        latest_observation = Observation.objects.filter(is_submit=True, is_verified=True) \
                                  .exclude(Q(observationimagemapping__image=None) |
                                           Q(observationimagemapping__image='') |
                                           Q(observationimagemapping__compressed_image=None) |
@@ -123,7 +123,6 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         data = json.loads(request.data['data'])
-        print(data)
 
         for i in request.FILES:
             data['map_data'][int(i.split('_')[-1])]['image'] = request.FILES[i]
