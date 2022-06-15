@@ -1,0 +1,64 @@
+version: '3'
+
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    restart: always
+    volumes:
+      - .:/usr/src/app/
+    command: >
+      sh -c "python3 manage.py makemigrations &&
+             python3 manage.py migrate --run-syncdb &&
+             python3 manage.py runserver 0.0.0.0:8000"
+
+    env_file:
+      - ./.env
+
+#    depends_on:
+#      - postgres
+
+#  postgres:
+#        image: postgres:10.5
+#        restart: always
+#        environment:
+#          - POSTGRES_DB=postgres
+#          - POSTGRES_USER=postgres
+#          - POSTGRES_PASSWORD=postgres
+#        logging:
+#          options:
+#            max-size: 10m
+#            max-file: "3"
+#        ports:
+#          - '5438:5432'
+#        volumes:
+#          - ./postgres-data:/var/lib/postgresql/data
+#          # copy the sql script to create tables
+#          - ./sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    restart: always
+  celery:
+    restart: always
+    build:
+      context: .
+    command: celery -A spritacular worker --beat -l info
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - WAIT_HOSTS=redis:6379
+      - WAIT_HOSTS_TIMEOUT=240
+    volumes:
+      - .:/usr/src/app/
+    env_file:
+      - ./.env
+    depends_on:
+#      - postgres
+      - redis
+      - app
+volumes:
+  pgdata:
