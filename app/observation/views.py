@@ -220,14 +220,15 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         if data.get('type') == 'verified':
             filters = filters & Q(is_submit=True, is_verified=True)
         elif data.get('type') == 'unverified':
-            filters = filters & Q(is_submit=True, is_verified=False)
+            filters = filters & Q(is_submit=True, is_verified=False, is_reject=False)
         elif data.get('type') == 'denied':
             filters = filters & Q(is_submit=True, is_reject=True)
         elif data.get('type') == 'draft':
             filters = filters & Q(is_submit=False)
 
         verified_count = Observation.objects.filter(user=request.user, is_verified=True, is_submit=True).count()
-        unverified_count = Observation.objects.filter(user=request.user, is_verified=False, is_submit=True).count()
+        unverified_count = Observation.objects.filter(user=request.user, is_verified=False, is_submit=True,
+                                                      is_reject=False).count()
         denied_count = Observation.objects.filter(user=request.user, is_reject=True, is_submit=True).count()
         draft_count = Observation.objects.filter(user=request.user, is_submit=False).count()
 
@@ -393,7 +394,7 @@ class ObservationGalleryViewSet(ListAPIView):
         if data.get('status') == 'verified':
             filters = filters & Q(is_verified=True)
         if data.get('status') == 'unverified':
-            filters = filters & Q(is_verified=False)
+            filters = filters & Q(is_verified=False, is_reject=False)
 
         if request.user.is_authenticated and (request.user.is_trained or request.user.is_superuser):
             # Trained user can see both verified and unverified observation on gallery screen.
@@ -544,7 +545,7 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         if query_data.get('status') == 'verified':
             filters = filters & Q(is_verified=True)
         if query_data.get('status') == 'unverified':
-            filters = filters & Q(is_verified=False)
+            filters = filters & Q(is_verified=False, is_reject=False)
         if query_data.get('category'):
             filters = filters & Q(observationcategorymapping__category__title__iexact=query_data.get('category'))
 
