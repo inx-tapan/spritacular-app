@@ -81,10 +81,14 @@ class HomeViewSet(ListAPIView):
                                           Q(observationimagemapping__compressed_image=None) |
                                           Q(observationimagemapping__compressed_image='')) \
                                  .order_by('-pk').distinct('id') \
-                                 .prefetch_related('user', 'camera', 'observationimagemapping_set',
+                                 .prefetch_related('user', 'camera',
+                                                   Prefetch('observationimagemapping_set',
+                                                            queryset=ObservationImageMapping.objects.all()
+                                                            .order_by('pk'))
+                                                   ,
                                                    Prefetch('observationcategorymapping_set',
-                                                            queryset=ObservationCategoryMapping.objects.prefetch_related(
-                                                                'category'))
+                                                            queryset=ObservationCategoryMapping.objects
+                                                            .prefetch_related('category'))
                                                    ,
                                                    Prefetch('observationlike_set',
                                                             queryset=ObservationLike.objects.all())
@@ -190,7 +194,10 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
             is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
 
             obs_obj = Observation.objects.filter(pk=kwargs.get('pk'), user=request.user, is_submit=False) \
-                .prefetch_related('user', 'camera', 'observationimagemapping_set',
+                .prefetch_related('user', 'camera',
+                                  Prefetch('observationimagemapping_set',
+                                           queryset=ObservationImageMapping.objects.all().order_by('pk'))
+                                  ,
                                   Prefetch('observationcategorymapping_set',
                                            queryset=ObservationCategoryMapping.objects.prefetch_related('category'))
                                   ,
@@ -239,7 +246,10 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
         observation_filter = Observation.objects.filter(filters) \
             .order_by('-pk').distinct('id') \
-            .prefetch_related('user', 'camera', 'observationimagemapping_set',
+            .prefetch_related('user', 'camera',
+                              Prefetch('observationimagemapping_set',
+                                       queryset=ObservationImageMapping.objects.all().order_by('pk'))
+                              ,
                               Prefetch('observationcategorymapping_set',
                                        queryset=ObservationCategoryMapping.objects.prefetch_related('category'))
                               ,
@@ -371,7 +381,10 @@ class ObservationGalleryViewSet(ListAPIView):
         return Observation.objects.all() \
             .exclude(Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')) \
             .order_by('-pk').distinct('id') \
-            .prefetch_related('user', 'camera', 'observationimagemapping_set',
+            .prefetch_related('user', 'camera',
+                              Prefetch('observationimagemapping_set',
+                                       queryset=ObservationImageMapping.objects.all().order_by('pk'))
+                              ,
                               Prefetch('observationcategorymapping_set',
                                        queryset=ObservationCategoryMapping.objects.prefetch_related('category'))
                               ,
@@ -555,7 +568,10 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
 
         observation_filter = Observation.objects.filter(filters). \
             exclude(Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')).order_by('-pk') \
-            .prefetch_related('user', 'camera', 'observationimagemapping_set',
+            .prefetch_related('user', 'camera',
+                              Prefetch('observationimagemapping_set',
+                                       queryset=ObservationImageMapping.objects.all().order_by('pk'))
+                              ,
                               Prefetch('observationcategorymapping_set',
                                        queryset=ObservationCategoryMapping.objects.prefetch_related('category'))
                               ,
