@@ -504,7 +504,7 @@ class ObservationVerifyViewSet(APIView):
             capture_exception(e)
             return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
 
-        if data.get('name') == "APPROVE":
+        if data.get('name') == "APPROVE" and not observation_obj.is_verified:
             # Approved
             observation_obj.is_verified = True
             observation_obj.is_reject = False
@@ -512,7 +512,7 @@ class ObservationVerifyViewSet(APIView):
 
             return Response({'success': 'Observation Approved.'}, status=status.HTTP_200_OK)
 
-        elif data.get('name') == "REJECT":
+        elif data.get('name') == "REJECT" and not observation_obj.is_reject:
             # Reject
             observation_obj.is_reject = True
             observation_obj.is_verified = False
