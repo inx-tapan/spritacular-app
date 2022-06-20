@@ -16,7 +16,7 @@ from .serializers import QuizSerializer, QuizQuestionMappingSerializer, QuizAtte
 
 def get_total_quiz_questions():
     config_obj = Configuration.objects.filter(key='TOTAL_QUIZ_QUESTIONS').last()
-    total_questions = 15
+    total_questions = 40
     if config_obj:
         total_questions = config_obj.value.get('total_quiz_questions')
 
@@ -87,7 +87,8 @@ class QuizViewSet(viewsets.ModelViewSet):
         error_message = None
         # answers = data.get('answers')
         if len(data) != total_questions:
-            return Response({'details': '15 questions not available.', 'status': 0}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'details': f'{total_questions} questions not available.', 'status': 0},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         try:
             with transaction.atomic():
