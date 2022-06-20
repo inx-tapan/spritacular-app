@@ -12,6 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from notification.signals import generate_and_send_notification_data
 from .serializers import (ObservationSerializer, ObservationCommentSerializer)
 from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
@@ -75,16 +76,20 @@ class HomeViewSet(ListAPIView):
         #                                                 observationimagemapping__compressed_image__isnull=False
         #                                                 ).order_by('-pk').distinct('pk')[:4]
 
-        latest_observation = Observation.objects.filter(is_verified=True) \
+        latest_observation = Observation.objects.filter(is_submit=True, is_verified=True) \
                                  .exclude(Q(observationimagemapping__image=None) |
                                           Q(observationimagemapping__image='') |
                                           Q(observationimagemapping__compressed_image=None) |
                                           Q(observationimagemapping__compressed_image='')) \
                                  .order_by('-pk').distinct('id') \
-                                 .prefetch_related('user', 'camera', 'observationimagemapping_set',
+                                 .prefetch_related('user', 'camera',
+                                                   Prefetch('observationimagemapping_set',
+                                                            queryset=ObservationImageMapping.objects.all()
+                                                            .order_by('pk'))
+                                                   ,
                                                    Prefetch('observationcategorymapping_set',
-                                                            queryset=ObservationCategoryMapping.objects.prefetch_related(
-                                                                'category'))
+                                                            queryset=ObservationCategoryMapping.objects
+                                                            .prefetch_related('category'))
                                                    ,
                                                    Prefetch('observationlike_set',
                                                             queryset=ObservationLike.objects.all())
@@ -123,7 +128,6 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         data = json.loads(request.data['data'])
-        print(data)
 
         for i in request.FILES:
             data['map_data'][int(i.split('_')[-1])]['image'] = request.FILES[i]
@@ -191,7 +195,10 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
             is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
 
             obs_obj = Observation.objects.filter(pk=kwargs.get('pk'), user=request.user, is_submit=False) \
-                .prefetch_related('user', 'camera', 'observationimagemapping_set',
+                .prefetch_related('user', 'camera',
+                                  Prefetch('observationimagemapping_set',
+                                           queryset=ObservationImageMapping.objects.all().order_by('pk'))
+                                  ,
                                   Prefetch('observationcategorymapping_set',
                                            queryset=ObservationCategoryMapping.objects.prefetch_related('category'))
                                   ,
@@ -221,14 +228,15 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         if data.get('type') == 'verified':
             filters = filters & Q(is_submit=True, is_verified=True)
         elif data.get('type') == 'unverified':
-            filters = filters & Q(is_submit=True, is_verified=False)
+            filters = filters & Q(is_submit=True, is_verified=False, is_reject=False)
         elif data.get('type') == 'denied':
             filters = filters & Q(is_submit=True, is_reject=True)
         elif data.get('type') == 'draft':
             filters = filters & Q(is_submit=False)
 
         verified_count = Observation.objects.filter(user=request.user, is_verified=True, is_submit=True).count()
-        unverified_count = Observation.objects.filter(user=request.user, is_verified=False, is_submit=True).count()
+        unverified_count = Observation.objects.filter(user=request.user, is_verified=False, is_submit=True,
+                                                      is_reject=False).count()
         denied_count = Observation.objects.filter(user=request.user, is_reject=True, is_submit=True).count()
         draft_count = Observation.objects.filter(user=request.user, is_submit=False).count()
 
@@ -239,7 +247,10 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
         observation_filter = Observation.objects.filter(filters) \
             .order_by('-pk').distinct('id') \
-            .prefetch_related('user', 'camera', 'observationimagemapping_set',
+            .prefetch_related('user', 'camera',
+                              Prefetch('observationimagemapping_set',
+                                       queryset=ObservationImageMapping.objects.all().order_by('pk'))
+                              ,
                               Prefetch('observationcategorymapping_set',
                                        queryset=ObservationCategoryMapping.objects.prefetch_related('category'))
                               ,
@@ -371,7 +382,10 @@ class ObservationGalleryViewSet(ListAPIView):
         return Observation.objects.all() \
             .exclude(Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')) \
             .order_by('-pk').distinct('id') \
-            .prefetch_related('user', 'camera', 'observationimagemapping_set',
+            .prefetch_related('user', 'camera',
+                              Prefetch('observationimagemapping_set',
+                                       queryset=ObservationImageMapping.objects.all().order_by('pk'))
+                              ,
                               Prefetch('observationcategorymapping_set',
                                        queryset=ObservationCategoryMapping.objects.prefetch_related('category'))
                               ,
@@ -394,7 +408,7 @@ class ObservationGalleryViewSet(ListAPIView):
         if data.get('status') == 'verified':
             filters = filters & Q(is_verified=True)
         if data.get('status') == 'unverified':
-            filters = filters & Q(is_verified=False)
+            filters = filters & Q(is_verified=False, is_reject=False)
 
         if request.user.is_authenticated and (request.user.is_trained or request.user.is_superuser):
             # Trained user can see both verified and unverified observation on gallery screen.
@@ -491,15 +505,17 @@ class ObservationVerifyViewSet(APIView):
             capture_exception(e)
             return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
 
-        if data.get('name') == "APPROVE":
+        if data.get('name') == "APPROVE" and not observation_obj.is_verified:
             # Approved
             observation_obj.is_verified = True
             observation_obj.is_reject = False
             observation_obj.save(update_fields=['is_verified', 'is_reject'])
-
+            # Send notification after observation approved
+            # generate_and_send_notification_data("Observation Approved", "Your observation is approved.",
+            #                                     observation_obj.user, request.user, observation_obj)
             return Response({'success': 'Observation Approved.'}, status=status.HTTP_200_OK)
 
-        elif data.get('name') == "REJECT":
+        elif data.get('name') == "REJECT" and not observation_obj.is_reject:
             # Reject
             observation_obj.is_reject = True
             observation_obj.is_verified = False
@@ -513,7 +529,9 @@ class ObservationVerifyViewSet(APIView):
                                                           other=reason_data.get('other'),
                                                           additional_comment=reason_data.get('additional_comment',
                                                                                              None))
-
+            # Send notification after observation rejected
+            # generate_and_send_notification_data("Observation Rejected", "Your observation is rejected.",
+            #                                     observation_obj.user, request.user, observation_obj)
             return Response({'success': 'Observation Rejected.'}, status=status.HTTP_200_OK)
 
         return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
@@ -545,7 +563,7 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
         if query_data.get('status') == 'verified':
             filters = filters & Q(is_verified=True)
         if query_data.get('status') == 'unverified':
-            filters = filters & Q(is_verified=False)
+            filters = filters & Q(is_verified=False, is_reject=False)
         if query_data.get('category'):
             filters = filters & Q(observationcategorymapping__category__title__iexact=query_data.get('category'))
 
@@ -555,7 +573,10 @@ class ObservationDashboardViewSet(viewsets.ModelViewSet):
 
         observation_filter = Observation.objects.filter(filters). \
             exclude(Q(observationimagemapping__image=None) | Q(observationimagemapping__image='')).order_by('-pk') \
-            .prefetch_related('user', 'camera', 'observationimagemapping_set',
+            .prefetch_related('user', 'camera',
+                              Prefetch('observationimagemapping_set',
+                                       queryset=ObservationImageMapping.objects.all().order_by('pk'))
+                              ,
                               Prefetch('observationcategorymapping_set',
                                        queryset=ObservationCategoryMapping.objects.prefetch_related('category'))
                               ,

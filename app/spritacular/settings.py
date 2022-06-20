@@ -39,7 +39,7 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', False) == 'True'
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ['0.0.0.0', '127.0.0.1', 'localhost', 'api.spritacular.org', 'api.stage.spritacular.org']
 
 # Application definition
 
@@ -294,7 +294,7 @@ if os.path.exists(f):
 cred = credentials.Certificate(os.path.join(BASE_DIR, config('PATH_TO_FCM_CREDS')))
 firebase_admin.initialize_app(cred)
 
-print("+++ SETTINGS-JUNE-9 +++")
+print("+++ SETTINGS-JUNE-20 +++")
 
 
 # Sentry configuration
