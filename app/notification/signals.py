@@ -8,42 +8,37 @@ from .models import Notification, UserNotification
 from observation.models import ObservationComment, VerifyObservation
 
 
+def generate_and_send_notification_data(title, message, to_user, from_user, observation):
+    data = f"{message}"
+    user = to_user  # To user
+    notify_from_user = from_user  # From user
+    sent_at = timezone.now()
+    if user != notify_from_user:  # Send notification if the user is not same
+        notification = Notification.objects.create(title=title, message=data)
+        result = send_notification_user(title, data, notification, sent_at, user, notify_from_user)
+        if result:
+            UserNotification.objects.create(user=user, notification=notification, observation=observation,
+                                            from_user=from_user, sent_at=sent_at)
+        else:
+            notification.delete()
+
+
 @receiver(post_save, sender=ObservationComment)
 def create_notification(sender, instance, created, **kwargs):
-    title = "New comments"
-    data = f"{instance.text}"
-    user = instance.observation.user    # To user
-    from_user = instance.user   # From user
-    sent_at = timezone.now()
-    notification = Notification.objects.create(title=title, message=data)
-    result = send_notification_user(title, data, notification, sent_at, user, from_user)
-    if result:
-        UserNotification.objects.create(user=user, notification=notification, observation=instance.observation,
-                                        from_user=from_user, sent_at=sent_at)
-    else:
-        notification.delete()
+    generate_and_send_notification_data("New comments", instance.text, instance.observation.user, instance.user,
+                                        instance.observation)
 
 
 @receiver(post_save, sender=VerifyObservation)
 def create_notification(sender, instance, created, **kwargs):
-    title = "New Vote"
-    data = f"{instance.user.first_name} votes your {instance.category.title} observation."
-    user = instance.observation.user    # To user
-    from_user = instance.user  # From user
-    sent_at = timezone.now()
-    notification = Notification.objects.create(title=title, message=data)
-    result = send_notification_user(title, data, notification, sent_at, user, from_user)
-    if result:
-        UserNotification.objects.create(user=user, notification=notification, observation=instance.observation,
-                                        from_user=from_user, sent_at=sent_at)
-    else:
-        notification.delete()
+    message = f"{instance.user.first_name} votes your {instance.category.title} observation."
+    generate_and_send_notification_data("New Vote", message, instance.observation.user, instance.user,
+                                        instance.observation)
 
 
 def send_notification_user(title, data, notification, sent_at, user, from_user):
     try:
         devices = FCMDevice.objects.filter(user=user)
-        print(f"Devices-->{devices}")
         from_user_profile_pic = from_user.profile_image.url if from_user.profile_image else ""
         for device in devices:
             sm = device.send_message(Message(notification=Notify(title=title, body=data),

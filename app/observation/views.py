@@ -12,6 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from notification.signals import generate_and_send_notification_data
 from .serializers import (ObservationSerializer, ObservationCommentSerializer)
 from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
@@ -509,7 +510,9 @@ class ObservationVerifyViewSet(APIView):
             observation_obj.is_verified = True
             observation_obj.is_reject = False
             observation_obj.save(update_fields=['is_verified', 'is_reject'])
-
+            # Send notification after observation approved
+            # generate_and_send_notification_data("Observation Approved", "Your observation is approved.",
+            #                                     observation_obj.user, request.user, observation_obj)
             return Response({'success': 'Observation Approved.'}, status=status.HTTP_200_OK)
 
         elif data.get('name') == "REJECT" and not observation_obj.is_reject:
@@ -526,7 +529,9 @@ class ObservationVerifyViewSet(APIView):
                                                           other=reason_data.get('other'),
                                                           additional_comment=reason_data.get('additional_comment',
                                                                                              None))
-
+            # Send notification after observation rejected
+            # generate_and_send_notification_data("Observation Rejected", "Your observation is rejected.",
+            #                                     observation_obj.user, request.user, observation_obj)
             return Response({'success': 'Observation Rejected.'}, status=status.HTTP_200_OK)
 
         return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
