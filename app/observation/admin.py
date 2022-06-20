@@ -9,7 +9,9 @@ class ObservationAdmin(admin.ModelAdmin):
     """
     Customizing admin view of Observation Table
     """
-    list_display = ('user', 'is_submit', 'is_to_be_verify')
+    list_display = ('user', 'is_submit', 'is_verified', 'is_reject')
+    search_fields = ('user__first_name', 'user__last_name', 'user__email', 'is_submit', 'is_verified', 'is_reject')
+    list_filter = ('is_submit', 'is_verified', 'is_reject')
 
 
 @admin.register(ObservationImageMapping)
@@ -18,6 +20,8 @@ class ObservationImageMappingAdmin(admin.ModelAdmin):
     Customizing admin view of ObservationImageMapping Table
     """
     list_display = ('id', 'observation', 'country_code', 'obs_date', 'obs_time', 'timezone')
+    search_fields = ('observation__user__first_name', 'observation__user__last_name', 'observation__user__email',
+                     'country_code', 'timezone')
 
 
 @admin.register(Category)

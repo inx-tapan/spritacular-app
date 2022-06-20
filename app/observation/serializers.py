@@ -316,12 +316,13 @@ class ObservationSerializer(serializers.ModelSerializer):
             ObservationImageMapping.objects.filter(observation=instance).delete()
             for obs_map_data in image_data:
                 obs_map_data.pop('category_map')
+                obs_map_data.pop('compressed_image', None)
+                obs_map_data.pop('image_name', None)
 
                 # Image Compression
                 image_file = obs_map_data.pop('image')
                 # Compression function call
                 image_file_name, compressed_image = compress_and_save_image_locally(image_file)
-
                 obs_image_map_obj = ObservationImageMapping.objects.create(**obs_map_data, observation=instance,
                                                                            compressed_image=compressed_image,
                                                                            image_name=image_file_name)
