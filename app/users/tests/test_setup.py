@@ -12,7 +12,7 @@ class TestSetUp(APITestCase):
     def setUp(self):
         super().setUp()
         self.client = APIClient()
-        self.login_url = reverse('token_obtain_pair')
+        self.login_url = reverse('login')
         self.register_url = reverse('register')
 
         self.user_data = {
