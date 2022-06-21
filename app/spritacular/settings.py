@@ -296,7 +296,7 @@ if os.path.exists(f):
 cred = credentials.Certificate(os.path.join(BASE_DIR, config('PATH_TO_FCM_CREDS')))
 firebase_admin.initialize_app(cred)
 
-print("+++ SETTINGS-JUNE-20-2 +++")
+print("+++ SETTINGS-JUNE-21 +++")
 
 
 # Sentry configuration

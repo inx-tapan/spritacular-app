@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .serializers import MyTokenObtainPairSerializer
+from .serializers import LoginSerializer
 
 from .models import User, CameraSetting
 from .serializers import UserRegisterSerializer, ChangePasswordSerializer, CameraSettingSerializer
@@ -103,8 +103,8 @@ class UserRegisterViewSet(viewsets.ModelViewSet):
         return Response(serializer, status=status.HTTP_200_OK)
 
 
-class CustomObtainTokenPairView(TokenObtainPairView):
-    serializer_class = MyTokenObtainPairSerializer
+class LoginViewSet(TokenObtainPairView):
+    serializer_class = LoginSerializer
 
 
 class ChangePasswordViewSet(APIView):
