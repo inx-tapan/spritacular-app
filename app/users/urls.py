@@ -12,7 +12,7 @@ from .views import UserRegisterViewSet, ChangePasswordViewSet, CameraSettingsApi
 
 urlpatterns = [
     # Login
-    path('token/', LoginViewSet.as_view(), name='token_obtain_pair'),
+    path('login/', LoginViewSet.as_view(), name='login'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     # SignUp
     path('register/', UserRegisterViewSet.as_view({'post': 'create'}), name='register'),
