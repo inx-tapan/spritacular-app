@@ -8,7 +8,7 @@ Core code repo for Spritacular - TLE Citizen Science web application
   * <https://www.python.org/downloads/release/python-380/>
 
 * Frameworks &
-  * Django 4.0
+  * Django 3.2
     * <https://www.djangoproject.com/>
   * Django Rest Framework
     * <https://www.django-rest-framework.org/>
@@ -101,6 +101,8 @@ CELERY_RESULT_BACKEND=xx
 FCM_SERVER_KEY=xx
 
 PATH_TO_FCM_CREDS=xx
+DSN=xx
+USE_SENTRY=True
 ```
 
 Run
