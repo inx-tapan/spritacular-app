@@ -13,42 +13,14 @@ from .models import User, CameraSetting
 from sentry_sdk import capture_exception
 
 
-class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+class LoginSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
-        # data = super().validate(attrs)
-        authenticate_kwargs = {
-            self.username_field: attrs[self.username_field],
-            "password": attrs["password"],
-        }
-        try:
-            self.user = User.objects.get(email__iexact=authenticate_kwargs["email"])
-        except User.DoesNotExist as e:
-            capture_exception(e)
-            raise serializers.ValidationError({'detail': constants.NO_ACCOUNT}, code=401)
-        if not self.user.check_password(authenticate_kwargs["password"]):
-            raise serializers.ValidationError({'detail': constants.NO_ACCOUNT}, code=401)
-
-        refresh = self.get_token(self.user)
-        # try:
-        #     camera_obj = CameraSetting.objects.get(user=self.user, is_profile_camera_settings=True)
-        #     camera = {
-        #         'camera_type': camera_obj.camera_type,
-        #         'iso': camera_obj.iso,
-        #         'shutter_speed': camera_obj.shutter_speed,
-        #         'fps': camera_obj.fps,
-        #         'lens_type': camera_obj.lens_type,
-        #         'focal_length': camera_obj.focal_length,
-        #         'aperture': camera_obj.aperture,
-        #         'question_field_one': camera_obj.question_field_one,
-        #         'question_field_two': camera_obj.question_field_two
-        #     }
-        # except CameraSetting.DoesNotExist:
-        #     camera = None
+        token_data = super().validate(attrs)
 
         data = {
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
+            'refresh': token_data.get('refresh'),
+            'access': token_data.get('access'),
             'id': self.user.id,
             'first_name': self.user.first_name,
             'last_name': self.user.last_name,
@@ -59,7 +31,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             'is_first_login': self.user.is_first_login,
             'profile_image': self.user.profile_image.url if self.user.profile_image else None,
             'location_metadata': self.user.location_metadata,
-            # 'camera': camera,
             'is_superuser': self.user.is_superuser,
             'is_trained': self.user.is_trained,
             'is_user': not self.user.is_superuser and not self.user.is_trained
@@ -69,8 +40,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             self.user.is_first_login = False
             self.user.save(update_fields=['is_first_login'])
 
-        self.user.last_login = timezone.now()
-        self.user.save(update_fields=['last_login'])
+        # self.user.last_login = timezone.now()
+        # self.user.save(update_fields=['last_login'])
 
         return data
 

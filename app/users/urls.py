@@ -3,8 +3,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 from django.urls import path, include
-from .views import UserRegisterViewSet, ChangePasswordViewSet, CameraSettingsApiView, \
-    CustomObtainTokenPairView, RootView
+from .views import UserRegisterViewSet, ChangePasswordViewSet, CameraSettingsApiView, LoginViewSet
 
 # from rest_framework import routers
 # router = routers.DefaultRouter()
@@ -13,7 +12,7 @@ from .views import UserRegisterViewSet, ChangePasswordViewSet, CameraSettingsApi
 
 urlpatterns = [
     # Login
-    path('token/', CustomObtainTokenPairView.as_view(), name='token_obtain_pair'),
+    path('token/', LoginViewSet.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     # SignUp
     path('register/', UserRegisterViewSet.as_view({'post': 'create'}), name='register'),
