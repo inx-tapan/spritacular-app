@@ -98,7 +98,7 @@ class HomeViewSet(ListAPIView):
                                                             queryset=ObservationWatchCount.objects.all())
                                                    )[:4]
 
-        observation_counts = Observation.objects.aggregate(
+        observation_counts = Observation.objects.filter(is_submit=True, is_verified=True).aggregate(
             self_count=Count('pk', distinct=True),
             country_count=Count('observationimagemapping__country_code', distinct=True),
             user_count=Count('user', distinct=True)
