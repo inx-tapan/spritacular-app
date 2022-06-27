@@ -98,7 +98,7 @@ class HomeViewSet(ListAPIView):
                                                             queryset=ObservationWatchCount.objects.all())
                                                    )[:4]
 
-        observation_counts = Observation.objects.aggregate(
+        observation_counts = Observation.objects.filter(is_submit=True, is_verified=True).aggregate(
             self_count=Count('pk', distinct=True),
             country_count=Count('observationimagemapping__country_code', distinct=True),
             user_count=Count('user', distinct=True)
@@ -466,19 +466,27 @@ class ObservationVoteViewSet(APIView):
             return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
         is_status_change = False
+        if VerifyObservation.objects.filter(observation_id=observation_id, user=request.user).exists():
+            # If user have already voted atleast one TLE of the observation
+            return Response({'success': 'You have already voted for this observation.', 'status': 1},
+                            status=status.HTTP_200_OK)
+
         for user_vote in data.get('votes'):
-            verify_obs_obj = VerifyObservation.objects.create(observation_id=observation_id, user=request.user,
-                                                              category_id=user_vote.get("category_id"),
-                                                              vote=user_vote.get("vote"))
+            if ObservationCategoryMapping.objects.filter(observation_id=observation_id,
+                                                         category_id=user_vote.get("category_id")).exists():
+                # If the observation have the TLE mapping
+                verify_obs_obj = VerifyObservation.objects.create(observation_id=observation_id, user=request.user,
+                                                                  category_id=user_vote.get("category_id"),
+                                                                  vote=user_vote.get("vote"))
 
-            if verify_obs_obj.user.is_superuser and verify_obs_obj.vote:
-                # If an admin votes yes on any category of the observation it will send for verification.
-                is_status_change = True
+                if verify_obs_obj.user.is_superuser and verify_obs_obj.vote:
+                    # If an admin votes yes on any category of the observation it will send for verification.
+                    is_status_change = True
 
-            if VerifyObservation.objects.filter(observation_id=observation_id,
-                                                category_id=user_vote.get("category_id"), vote=True).count() > 3:
-                # If any category of the observation have more than 3 yes votes it will send for verification.
-                is_status_change = True
+                if VerifyObservation.objects.filter(observation_id=observation_id,
+                                                    category_id=user_vote.get("category_id"), vote=True).count() > 3:
+                    # If any category of the observation have more than 3 yes votes it will send for verification.
+                    is_status_change = True
 
         if is_status_change:
             print("status change")
