@@ -41,7 +41,8 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', False) == 'True'
 
-ALLOWED_HOSTS = ['0.0.0.0', '127.0.0.1', 'localhost', 'api.spritacular.org', 'api.stage.spritacular.org']
+ALLOWED_HOSTS = ['0.0.0.0', '127.0.0.1', 'localhost', 'api.spritacular.org', 'api.stage.spritacular.org',
+                 '35.175.116.233', '3.235.53.246']
 
 # Application definition
 
