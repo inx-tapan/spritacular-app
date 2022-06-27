@@ -37,7 +37,12 @@ class Blog(BaseModel):
         return f"Blog by {self.user.first_name} {self.user.last_name}"
 
     def set_slug(self):
-        slug_value = f'{slugify(self.title)}-' + ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
+        if self.slug:
+            slug_string = self.slug.split('-')[-1]
+        else:
+            slug_string = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
+
+        slug_value = f'{slugify(self.title)}-{slug_string}'
         self.slug = slug_value
         self.save(update_fields=['slug'])
 

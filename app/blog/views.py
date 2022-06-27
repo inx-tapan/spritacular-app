@@ -29,7 +29,6 @@ class BlogCategoryListViewSet(APIView):
 class BlogViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
-        print(f"Blog ACTION {self.action}")
         permission_classes = [IsAuthenticated, IsAdmin] if self.action in ['post', 'put'] else []
         return [permission() for permission in permission_classes]
 
