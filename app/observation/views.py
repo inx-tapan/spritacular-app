@@ -70,33 +70,47 @@ class HomeViewSet(ListAPIView):
     """
     serializer_class = ObservationSerializer
 
+    def get_queryset(self):
+        return Observation.objects.filter(is_submit=True, is_verified=True) \
+                   .exclude(Q(observationimagemapping__image=None) |
+                            Q(observationimagemapping__image='') |
+                            Q(observationimagemapping__compressed_image=None) |
+                            Q(observationimagemapping__compressed_image='')) \
+                   .order_by('-pk').distinct('id') \
+                   .prefetch_related('user', 'camera',
+                                     Prefetch('observationimagemapping_set',
+                                              queryset=ObservationImageMapping.objects.all()
+                                              .order_by('pk'))
+                                     ,
+                                     Prefetch('observationcategorymapping_set',
+                                              queryset=ObservationCategoryMapping.objects
+                                              .prefetch_related('category'))
+                                     ,
+                                     Prefetch('observationlike_set',
+                                              queryset=ObservationLike.objects.all())
+                                     ,
+                                     Prefetch('observationwatchcount_set',
+                                              queryset=ObservationWatchCount.objects.all())
+                                     )[:4]
+
     def get(self, request, *args, **kwargs):
         # latest_observation = Observation.objects.filter(is_verified=True,
         #                                                 observationimagemapping__image__isnull=False,
         #                                                 observationimagemapping__compressed_image__isnull=False
         #                                                 ).order_by('-pk').distinct('pk')[:4]
 
-        latest_observation = Observation.objects.filter(is_submit=True, is_verified=True) \
-                                 .exclude(Q(observationimagemapping__image=None) |
-                                          Q(observationimagemapping__image='') |
-                                          Q(observationimagemapping__compressed_image=None) |
-                                          Q(observationimagemapping__compressed_image='')) \
-                                 .order_by('-pk').distinct('id') \
-                                 .prefetch_related('user', 'camera',
-                                                   Prefetch('observationimagemapping_set',
-                                                            queryset=ObservationImageMapping.objects.all()
-                                                            .order_by('pk'))
-                                                   ,
-                                                   Prefetch('observationcategorymapping_set',
-                                                            queryset=ObservationCategoryMapping.objects
-                                                            .prefetch_related('category'))
-                                                   ,
-                                                   Prefetch('observationlike_set',
-                                                            queryset=ObservationLike.objects.all())
-                                                   ,
-                                                   Prefetch('observationwatchcount_set',
-                                                            queryset=ObservationWatchCount.objects.all())
-                                                   )[:4]
+        if request.user.is_authenticated:
+            # For normal users
+            is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
+            is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
+            is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
+
+            latest_observation = self.get_queryset().annotate(is_like=Exists(is_like),
+                                                              is_watch=Exists(is_watch),
+                                                              is_voted=Exists(is_voted))
+
+        else:
+            latest_observation = self.get_queryset()
 
         observation_counts = Observation.objects.filter(is_submit=True, is_verified=True).aggregate(
             self_count=Count('pk', distinct=True),
