@@ -479,6 +479,8 @@ class ObservationVoteViewSet(APIView):
             capture_exception(e)
             return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
+        # Check if the user is not voting his/her created observation
+        self.check_object_permissions(request, observation_obj)
         is_status_change = False
         if VerifyObservation.objects.filter(observation_id=observation_id, user=request.user).exists():
             # If user have already voted atleast one TLE of the observation
