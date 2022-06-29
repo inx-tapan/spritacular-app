@@ -70,35 +70,49 @@ class HomeViewSet(ListAPIView):
     """
     serializer_class = ObservationSerializer
 
+    def get_queryset(self):
+        return Observation.objects.filter(is_submit=True, is_verified=True) \
+                   .exclude(Q(observationimagemapping__image=None) |
+                            Q(observationimagemapping__image='') |
+                            Q(observationimagemapping__compressed_image=None) |
+                            Q(observationimagemapping__compressed_image='')) \
+                   .order_by('-pk').distinct('id') \
+                   .prefetch_related('user', 'camera',
+                                     Prefetch('observationimagemapping_set',
+                                              queryset=ObservationImageMapping.objects.all()
+                                              .order_by('pk'))
+                                     ,
+                                     Prefetch('observationcategorymapping_set',
+                                              queryset=ObservationCategoryMapping.objects
+                                              .prefetch_related('category'))
+                                     ,
+                                     Prefetch('observationlike_set',
+                                              queryset=ObservationLike.objects.all())
+                                     ,
+                                     Prefetch('observationwatchcount_set',
+                                              queryset=ObservationWatchCount.objects.all())
+                                     )[:4]
+
     def get(self, request, *args, **kwargs):
         # latest_observation = Observation.objects.filter(is_verified=True,
         #                                                 observationimagemapping__image__isnull=False,
         #                                                 observationimagemapping__compressed_image__isnull=False
         #                                                 ).order_by('-pk').distinct('pk')[:4]
 
-        latest_observation = Observation.objects.filter(is_submit=True, is_verified=True) \
-                                 .exclude(Q(observationimagemapping__image=None) |
-                                          Q(observationimagemapping__image='') |
-                                          Q(observationimagemapping__compressed_image=None) |
-                                          Q(observationimagemapping__compressed_image='')) \
-                                 .order_by('-pk').distinct('id') \
-                                 .prefetch_related('user', 'camera',
-                                                   Prefetch('observationimagemapping_set',
-                                                            queryset=ObservationImageMapping.objects.all()
-                                                            .order_by('pk'))
-                                                   ,
-                                                   Prefetch('observationcategorymapping_set',
-                                                            queryset=ObservationCategoryMapping.objects
-                                                            .prefetch_related('category'))
-                                                   ,
-                                                   Prefetch('observationlike_set',
-                                                            queryset=ObservationLike.objects.all())
-                                                   ,
-                                                   Prefetch('observationwatchcount_set',
-                                                            queryset=ObservationWatchCount.objects.all())
-                                                   )[:4]
+        if request.user.is_authenticated:
+            # For normal users
+            is_like = ObservationLike.objects.filter(observation=OuterRef('pk'), user=request.user)
+            is_watch = ObservationWatchCount.objects.filter(observation=OuterRef('pk'), user=request.user)
+            is_voted = VerifyObservation.objects.filter(observation=OuterRef('pk'), user=request.user)
 
-        observation_counts = Observation.objects.aggregate(
+            latest_observation = self.get_queryset().annotate(is_like=Exists(is_like),
+                                                              is_watch=Exists(is_watch),
+                                                              is_voted=Exists(is_voted))
+
+        else:
+            latest_observation = self.get_queryset()
+
+        observation_counts = Observation.objects.filter(is_submit=True, is_verified=True).aggregate(
             self_count=Count('pk', distinct=True),
             country_count=Count('observationimagemapping__country_code', distinct=True),
             user_count=Count('user', distinct=True)
@@ -465,20 +479,30 @@ class ObservationVoteViewSet(APIView):
             capture_exception(e)
             return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
 
+        # Check if the user is not voting his/her created observation
+        self.check_object_permissions(request, observation_obj)
         is_status_change = False
+        if VerifyObservation.objects.filter(observation_id=observation_id, user=request.user).exists():
+            # If user have already voted atleast one TLE of the observation
+            return Response({'success': 'You have already voted for this observation.', 'status': 1},
+                            status=status.HTTP_200_OK)
+
         for user_vote in data.get('votes'):
-            verify_obs_obj = VerifyObservation.objects.create(observation_id=observation_id, user=request.user,
-                                                              category_id=user_vote.get("category_id"),
-                                                              vote=user_vote.get("vote"))
+            if ObservationCategoryMapping.objects.filter(observation_id=observation_id,
+                                                         category_id=user_vote.get("category_id")).exists():
+                # If the observation have the TLE mapping
+                verify_obs_obj = VerifyObservation.objects.create(observation_id=observation_id, user=request.user,
+                                                                  category_id=user_vote.get("category_id"),
+                                                                  vote=user_vote.get("vote"))
 
-            if verify_obs_obj.user.is_superuser and verify_obs_obj.vote:
-                # If an admin votes yes on any category of the observation it will send for verification.
-                is_status_change = True
+                if verify_obs_obj.user.is_superuser and verify_obs_obj.vote:
+                    # If an admin votes yes on any category of the observation it will send for verification.
+                    is_status_change = True
 
-            if VerifyObservation.objects.filter(observation_id=observation_id,
-                                                category_id=user_vote.get("category_id"), vote=True).count() > 3:
-                # If any category of the observation have more than 3 yes votes it will send for verification.
-                is_status_change = True
+                if VerifyObservation.objects.filter(observation_id=observation_id,
+                                                    category_id=user_vote.get("category_id"), vote=True).count() > 3:
+                    # If any category of the observation have more than 3 yes votes it will send for verification.
+                    is_status_change = True
 
         if is_status_change:
             print("status change")
