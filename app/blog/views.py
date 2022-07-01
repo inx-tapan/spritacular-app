@@ -211,7 +211,14 @@ class ContentManagementViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         data = request.data
-        content_obj = ContentManagement.objects.create(**data)
+        page_name = kwargs.get('page')
+        if not ContentManagement.objects.filter(type=page_name).exists():
+            content_obj = ContentManagement.objects.create(**data, type=page_name)
+        else:
+            content_obj = ContentManagement.objects.get(type__exact=page_name)
+            content_obj.title = data.get('title')
+            content_obj.content = data.get('content')
+            content_obj.save(update_fields=['title', 'content'])
 
         return Response({'title': content_obj.title, 'content': content_obj.content}, status=status.HTTP_201_CREATED)
 
