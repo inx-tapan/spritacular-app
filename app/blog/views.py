@@ -8,7 +8,7 @@ from users.permissions import IsAdmin
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from blog.models import BlogCategory, Blog, BlogImageData
+from blog.models import BlogCategory, Blog, BlogImageData, ContentManagement
 
 
 class BlogCategoryListViewSet(APIView):
@@ -186,3 +186,46 @@ class GetImageUrlViewSet(viewsets.ModelViewSet):
         image_obj.delete()
 
         return Response({'status': 1}, status=status.HTTP_200_OK)
+
+
+class ContentManagementViewSet(viewsets.ModelViewSet):
+
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated, IsAdmin] if self.action in ['post', 'put'] else []
+        return [permission() for permission in permission_classes]
+
+    def get_object(self, page_name=None):
+        try:
+            return ContentManagement.objects.get(type__exact=page_name)
+        except ContentManagement.DoesNotExist as e:
+            capture_exception(e)
+            return None
+
+    def list(self, request, *args, **kwargs):
+        page_name = kwargs.get('page')
+        content_obj = self.get_object(page_name)
+        if not content_obj:
+            return Response(constants.NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({'title': content_obj.title, 'content': content_obj.content}, status=status.HTTP_200_OK)
+
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        content_obj = ContentManagement.objects.create(**data)
+
+        return Response({'title': content_obj.title, 'content': content_obj.content}, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        data = request.data
+        content_obj = self.get_object(type)
+        if not content_obj:
+            return Response(constants.NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
+
+        content_obj.title = data.get('title')
+        content_obj.content = data.get('content')
+        content_obj.save(update_fields=['title', 'content'])
+
+        return Response({'title': content_obj.title, 'content': content_obj.content}, status=status.HTTP_200_OK)
+
+
+

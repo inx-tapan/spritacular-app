@@ -53,9 +53,15 @@ class BlogImageData(models.Model):
     is_published = models.BooleanField(default=False)
 
 
-# class BlogImageMapping(models.Model):
-#     blog = models.ForeignKey(Blog, on_delete=models.CASCADE)
-#     image = models.ForeignKey(BlogImageData, on_delete=models.CASCADE)
-#
-#     def __str__(self):
-#         return f"Image for blog by {self.blog.user.first_name} {self.blog.user.last_name}"
+class ContentManagement(models.Model):
+    PAGE_CHOICES = [
+        ('policy', 'Spritacular Policy'),
+        ('become_an_ambassador', 'Become an ambassador'),
+        ('spritacular_google_group', 'Spritacular Google Group')
+    ]
+    type = models.CharField(choices=PAGE_CHOICES, max_length=100)
+    title = models.TextField(default='')
+    content = models.TextField(default='')
+
+    def __str__(self):
+        return f"{self.title}"
