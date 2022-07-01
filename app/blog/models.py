@@ -56,8 +56,8 @@ class BlogImageData(models.Model):
 class ContentManagement(models.Model):
     PAGE_CHOICES = [
         ('policy', 'Spritacular Policy'),
-        ('become_an_ambassador', 'Become an ambassador'),
-        ('spritacular_google_group', 'Spritacular Google Group')
+        ('become-an-ambassador', 'Become an ambassador'),
+        ('spritacular-google-group', 'Spritacular Google Group')
     ]
     type = models.CharField(choices=PAGE_CHOICES, max_length=100)
     title = models.TextField(default='')
