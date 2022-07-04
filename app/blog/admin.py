@@ -31,4 +31,4 @@ class ContentManagementDataAdmin(admin.ModelAdmin):
     """
     Customizing admin view of ContentManagement Table
     """
-    list_display = ('id', 'title', 'content')
+    list_display = ('id', 'title')
