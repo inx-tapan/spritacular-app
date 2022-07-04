@@ -205,7 +205,7 @@ class ContentManagementViewSet(viewsets.ModelViewSet):
         page_name = kwargs.get('page')
         content_obj = self.get_object(page_name)
         if not content_obj:
-            return Response(constants.NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
+            return Response(constants.CONTENT_NOT_FOUND, status=status.HTTP_200_OK)
 
         return Response({'title': content_obj.title, 'content': content_obj.content}, status=status.HTTP_200_OK)
 
@@ -226,7 +226,7 @@ class ContentManagementViewSet(viewsets.ModelViewSet):
         data = request.data
         content_obj = self.get_object(type)
         if not content_obj:
-            return Response(constants.NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
+            return Response(constants.CONTENT_NOT_FOUND, status=status.HTTP_200_OK)
 
         content_obj.title = data.get('title')
         content_obj.content = data.get('content')
