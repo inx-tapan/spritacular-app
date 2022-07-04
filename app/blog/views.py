@@ -213,7 +213,9 @@ class ContentManagementViewSet(viewsets.ModelViewSet):
         data = request.data
         page_name = kwargs.get('page')
         if not ContentManagement.objects.filter(type=page_name).exists():
-            content_obj = ContentManagement.objects.create(**data, type=page_name)
+            content_obj = ContentManagement.objects.create(title=data.get('title'),
+                                                           content=data.get('content'),
+                                                           type=page_name)
         else:
             content_obj = ContentManagement.objects.get(type__exact=page_name)
             content_obj.title = data.get('title')
