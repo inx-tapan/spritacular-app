@@ -6,6 +6,7 @@ from django.conf.urls.static import static
 from django.views.static import serve
 from fcm_django.api.rest_framework import FCMDeviceAuthorizedViewSet
 from users.views import RootView
+from blog.views import ContentManagementViewSet
 
 urlpatterns = [
     path('', RootView.as_view(), name='root_view'),
@@ -21,6 +22,8 @@ urlpatterns = [
     path('api/devices/', FCMDeviceAuthorizedViewSet.as_view({'post': 'create'}), name='create_fcm_device'),
     path('api/blog/', include('blog.urls')),
     path('api/quiz/', include('quiz.urls')),
+    path('api/<str:page>/', ContentManagementViewSet.as_view({'post': 'create', 'put': 'update', 'get': 'list'}),
+         name='content_management'),
     url(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT})
 ]
 
