@@ -29,6 +29,8 @@ class Observation(BaseModel):
     video_url = models.URLField(null=True, blank=True)
     story = models.TextField(default='', blank=True)
 
+    verified_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='verified_by')
+
     def __str__(self):
         return f"Observation by {self.user.email}"
 
