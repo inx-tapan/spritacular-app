@@ -533,7 +533,8 @@ class ObservationVerifyViewSet(APIView):
             # Approved
             observation_obj.is_verified = True
             observation_obj.is_reject = False
-            observation_obj.save(update_fields=['is_verified', 'is_reject'])
+            observation_obj.verified_by = request.user
+            observation_obj.save(update_fields=['is_verified', 'is_reject', 'verified_by'])
             # Send notification after observation approved
             # generate_and_send_notification_data("Observation Approved", "Your observation is approved.",
             #                                     observation_obj.user, request.user, observation_obj)
@@ -543,7 +544,8 @@ class ObservationVerifyViewSet(APIView):
             # Reject
             observation_obj.is_reject = True
             observation_obj.is_verified = False
-            observation_obj.save(update_fields=['is_reject', 'is_verified'])
+            observation_obj.verified_by = request.user
+            observation_obj.save(update_fields=['is_reject', 'is_verified', 'verified_by'])
 
             if data.get('reason'):
                 reason_data = data.get('reason')
