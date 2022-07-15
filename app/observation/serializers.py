@@ -277,6 +277,9 @@ class ObservationSerializer(serializers.ModelSerializer):
 
         # if submit
         instance.is_submit = submit_flag
+        instance.elevation_angle = validated_data.get('elevation_angle')
+        instance.video_url = validated_data.get('video_url')
+        instance.story = validated_data.get('story')
         instance.save()
 
         category_data = image_data[0].get('category_map')

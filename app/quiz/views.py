@@ -44,7 +44,7 @@ class GetQuizQuestionsViewSet(APIView):
         for q_opt in QuizOption.objects.all():
             option_record = {
                 'id': q_opt.id,
-                'title': q_opt.title.title()
+                'title': q_opt.title
             }
 
             option_data.append(option_record)
