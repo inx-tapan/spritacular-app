@@ -27,7 +27,7 @@ class GetQuizQuestionsViewSet(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
-        question_list = list(Question.objects.all())
+        question_list = list(Question.objects.filter(is_user_credit=True))
         total_questions = get_total_quiz_questions()
         random_question_list = random.sample(question_list, total_questions)
 

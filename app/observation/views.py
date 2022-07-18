@@ -16,10 +16,11 @@ from notification.signals import generate_and_send_notification_data
 from .serializers import (ObservationSerializer, ObservationCommentSerializer)
 from rest_framework import status, viewsets
 from users.serializers import CameraSettingSerializer
-from users.permissions import IsAdminOrTrained, IsAdmin
+from users.permissions import IsAdminOrTrained, IsAdmin, IsObjectOwnerOrAdmin
 from .models import (Observation, Category, ObservationComment, ObservationLike, ObservationWatchCount,
                      VerifyObservation, ObservationReasonForReject, ObservationImageMapping, ObservationCategoryMapping)
-from constants import NOT_FOUND, OBS_FORM_SUCCESS, SOMETHING_WENT_WRONG
+from users.models import CameraSetting
+from constants import NOT_FOUND, OBS_FORM_SUCCESS, SOMETHING_WENT_WRONG, OBS_DRAFT_DELETE
 from rest_framework.pagination import PageNumberPagination, CursorPagination
 from sentry_sdk import capture_exception
 
@@ -138,7 +139,10 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
     create, update, retrieve and user created observations.
     """
     serializer_class = ObservationSerializer
-    permission_classes = (IsAuthenticated,)
+
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated, IsObjectOwnerOrAdmin] if self.action in ['destroy', 'retrieve', 'update'] else [IsAuthenticated]
+        return [permission() for permission in permission_classes]
 
     def create(self, request, *args, **kwargs):
         data = json.loads(request.data['data'])
@@ -151,7 +155,6 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         obs_context = {'request': request, 'observation_settings': True}
         if 'is_draft' in data:
             # Adding is_draft for eliminating validations check.
-            logger.info('DRAFT')
             obs_context['is_draft'] = True
 
         # if isinstance(camera_data, dict):
@@ -185,7 +188,6 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         obs_context = {'request': request, 'observation_settings': True}
         if 'is_draft' in data:
             # Adding is_draft for eliminating validations check.
-            logger.info('DRAFT')
             obs_context['is_draft'] = True
 
         camera_serializer = CameraSettingSerializer(instance=obs_obj.camera, data=camera_data, context=obs_context)
@@ -235,6 +237,14 @@ class UploadObservationViewSet(viewsets.ModelViewSet):
         serializer = self.serializer_class(obs_obj, context={'user_observation_collection': True, 'request': request})
 
         return Response({'data': serializer.data, 'status': 1}, status=status.HTTP_200_OK)
+
+    def destroy(self, request, *args, **kwargs):
+        observation_obj = get_object_or_404(Observation, pk=kwargs.get('pk'), is_submit=False)
+        self.check_object_permissions(request, observation_obj)
+        CameraSetting.objects.filter(id=observation_obj.camera.id).delete()
+        observation_obj.delete()
+
+        return Response(OBS_DRAFT_DELETE, status=status.HTTP_200_OK)
 
     def user_observation_collection(self, request, *args, **kwargs):
         data = request.query_params

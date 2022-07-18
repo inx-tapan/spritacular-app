@@ -28,6 +28,7 @@ class Observation(BaseModel):
     elevation_angle = models.DecimalField(max_digits=22, decimal_places=16, null=True, blank=True)
     video_url = models.URLField(null=True, blank=True)
     story = models.TextField(default='', blank=True)
+    active_tab = models.JSONField(default=dict)
 
     verified_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='verified_by')
 
