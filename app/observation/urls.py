@@ -15,6 +15,7 @@ urlpatterns = [
     path('upload_observation/', UploadObservationViewSet.as_view({'post': 'create'}), name="upload_observation"),
     path('update_observation/<int:pk>/', UploadObservationViewSet.as_view({'put': 'update'}),
          name="update_observation"),
+    path('draft_delete/<int:pk>/', UploadObservationViewSet.as_view({'delete': 'destroy'}), name="draft_delete"),
     # Get observation details
     path('get_observation_details/<int:pk>/', ObservationImageCheck.as_view(), name="get_observation_details"),
     path('observation_collection/', UploadObservationViewSet.as_view({'get': 'user_observation_collection'}),
