@@ -25,6 +25,7 @@ class Question(models.Model):
     image = models.FileField(upload_to='quiz')
     correct_option = models.ManyToManyField(QuizOption)
     weightage = models.FloatField(default=1)
+    is_user_credit = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.id}"

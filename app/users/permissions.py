@@ -12,6 +12,16 @@ class IsOwnerOrAdmin(permissions.BasePermission):
         return obj if request.user.is_superuser else obj == request.user
 
 
+class IsObjectOwnerOrAdmin(permissions.BasePermission):
+    message = "You must be the owner of this object."
+
+    def has_permission(self, request, view):
+        return request.user
+
+    def has_object_permission(self, request, view, obj):
+        return obj if request.user.is_superuser else obj.user == request.user
+
+
 class IsAdminOrTrained(permissions.BasePermission):
     message = "You must be a trained or a admin user."
 

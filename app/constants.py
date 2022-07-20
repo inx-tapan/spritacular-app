@@ -19,7 +19,8 @@ WELCOME = '<center><h1>Welcome to Spritacular</h1></center>'
 NOT_FOUND = {'detail': 'Not found.', 'status': 0}
 CONTENT_NOT_FOUND = {'detail': 'Not found.', 'content': False, 'status': 0}
 OBS_FORM_SUCCESS = {'success': 'Form submitted successfully', 'status': 1}
+OBS_DRAFT_DELETE = {'success': 'Draft successfully deleted.', 'status': 1}
 BLOG_FORM_SUCCESS = {'success': 'Blog created successfully', 'status': 1}
 NOTIFICATION_READ_SUCCESS = "Notification read status changed successfully"
 
-SOMETHING_WENT_WRONG = {'details': 'Something went wrong.', 'status': 0}
+SOMETHING_WENT_WRONG = {'detail': 'Something went wrong.', 'status': 0}
