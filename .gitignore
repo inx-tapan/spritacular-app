@@ -14,6 +14,7 @@ media/
 !/app/.elasticbeanstalk/*.global.yml
 
 app/fcm-spritacular.json
+app/drive-spritacular.json
 
 app/celerybeat-schedule
 
