@@ -98,7 +98,7 @@ class ObservationSerializer(serializers.ModelSerializer):
         model = Observation
         fields = ('id', 'user', 'image_type', 'map_data', 'elevation_angle', 'video_url', 'story', 'images',
                   'user_data', 'is_verified', 'category_data', 'camera_data', 'like_watch_count_data', 'is_submit',
-                  'is_reject', 'active_tab')
+                  'is_reject', 'active_tab', 'media_file_url')
 
     # def __init__(self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)
@@ -281,6 +281,7 @@ class ObservationSerializer(serializers.ModelSerializer):
         instance.video_url = validated_data.get('video_url')
         instance.story = validated_data.get('story')
         instance.active_tab = validated_data.get('active_tab')
+        instance.media_file_url = validated_data.get('media_file_url')
         instance.save()
 
         category_data = image_data[0].get('category_map')

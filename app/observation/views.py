@@ -673,6 +673,7 @@ class GenerateObservationCSVViewSet(APIView):
                                       'elevation_angle',
                                       'video_url',
                                       'story',
+                                      'media_file_url',
                                       'is_submit',
                                       'is_verified',
                                       'is_reject').distinct('id')
@@ -686,7 +687,7 @@ class GenerateObservationCSVViewSet(APIView):
                       'time_accuracy', 'is_precise_azimuth', 'azimuth', 'timezone',
                       'camera_type', 'focal_length', 'aperture', 'iso', 'shutter_speed', 'fps',
                       'track_of_time', 'special_equipment_used', 'elevation_angle', 'video_url', 'story',
-                      'is_submit', 'is_verified', 'is_reject']
+                      'media_file_url', 'is_submit', 'is_verified', 'is_reject']
 
         # csv file generation
         response = HttpResponse(content_type='text/csv', status=status.HTTP_200_OK)
