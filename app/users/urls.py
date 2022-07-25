@@ -22,7 +22,7 @@ urlpatterns = [
          UserRegisterViewSet.as_view({'patch': 'profile_update', 'put': 'update_user_profile'}),
          name='profile_retrieve_update'),
     # Change Password
-    path('change-password/<int:pk>/', ChangePasswordViewSet.as_view(), name='change-password'),
+    path('change-password/', ChangePasswordViewSet.as_view(), name='change-password'),
     # Password reset
     path('password_reset/', include('django_rest_passwordreset.urls', namespace='password_reset')),
     path('camera_setting/'

@@ -114,9 +114,8 @@ class ChangePasswordViewSet(APIView):
     serializer_class = ChangePasswordSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
 
-    def put(self, request, pk=None):
-        user = get_object_or_404(User, pk=pk)
-        self.check_object_permissions(request, user)
+    def put(self, request, *args, **kwargs):
+        user = request.user
         data = request.data
         data['user'] = user
         serializer = self.serializer_class(data=data, context={"user": user})
