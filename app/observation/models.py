@@ -9,12 +9,12 @@ from users.models import User, CameraSetting, BaseModel
 
 class Observation(BaseModel):
     SINGLE_IMAGE = 1
-    MULTIPLE_IMAGE = 2
+    # MULTIPLE_IMAGE = 2
     SEQUENCE_IMAGE = 3
 
     IMAGE_TYPE = [
         (SINGLE_IMAGE, 'Single image'),
-        (MULTIPLE_IMAGE, 'Multiple images from same or different observation.'),
+        # (MULTIPLE_IMAGE, 'Multiple images from same or different observation.'),
         (SEQUENCE_IMAGE, 'Images sequence from video recorded.'),
     ]
     user = models.ForeignKey(User, on_delete=models.CASCADE)
