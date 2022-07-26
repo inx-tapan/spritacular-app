@@ -3,10 +3,10 @@ from rest_framework import permissions
 
 class IsOwnerOrAdmin(permissions.BasePermission):
     message = "You must be the owner of this object."
-    my_safe_methods = ['GET', 'PUT', 'PATCH', 'POST']
+    # my_safe_methods = ['GET', 'PUT', 'PATCH', 'POST']
 
     def has_permission(self, request, view):
-        return request.method in self.my_safe_methods
+        return request.user
 
     def has_object_permission(self, request, view, obj):
         return obj if request.user.is_superuser else obj == request.user

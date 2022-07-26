@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from sentry_sdk import capture_exception
 
 import constants
@@ -163,6 +164,13 @@ class BlogViewSet(viewsets.ModelViewSet):
                                   "category": blog_obj.category.id if blog_obj.category else None,
                                   "thumbnail_image": blog_obj.thumbnail_image.url,
                                   "slug": blog_obj.slug}}, status=status.HTTP_200_OK)
+
+    def destroy(self, request, *args, **kwargs):
+        blog_obj = get_object_or_404(Blog, slug=kwargs.get('slug'))
+        article_type = "Blog" if blog_obj.article_type == 1 else "Tutorial"
+        blog_obj.delete()
+
+        return Response({'success': f'{article_type} successfully deleted.', 'status': 1}, status=status.HTTP_200_OK)
 
 
 class GetImageUrlViewSet(viewsets.ModelViewSet):

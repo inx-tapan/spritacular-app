@@ -9,12 +9,12 @@ from users.models import User, CameraSetting, BaseModel
 
 class Observation(BaseModel):
     SINGLE_IMAGE = 1
-    MULTIPLE_IMAGE = 2
+    # MULTIPLE_IMAGE = 2
     SEQUENCE_IMAGE = 3
 
     IMAGE_TYPE = [
         (SINGLE_IMAGE, 'Single image'),
-        (MULTIPLE_IMAGE, 'Multiple images from same or different observation.'),
+        # (MULTIPLE_IMAGE, 'Multiple images from same or different observation.'),
         (SEQUENCE_IMAGE, 'Images sequence from video recorded.'),
     ]
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -31,6 +31,7 @@ class Observation(BaseModel):
     active_tab = models.JSONField(default=dict)
 
     verified_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='verified_by')
+    media_file_url = models.URLField(null=True, blank=True)
 
     def __str__(self):
         return f"Observation by {self.user.email}"
