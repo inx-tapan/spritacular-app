@@ -7,6 +7,7 @@ from .managers import CustomUserManager
 from django.dispatch import receiver
 from django_rest_passwordreset.signals import reset_password_token_created
 from django.core.mail import send_mail
+from django.template.loader import render_to_string
 from spritacular.settings import EMAIL_HOST_USER, FRONTEND_URL
 
 
@@ -66,8 +67,10 @@ class CameraSetting(BaseModel):
 
 @receiver(reset_password_token_created)
 def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
-    email_plaintext_message = "{}?token={}".format(FRONTEND_URL + '/password_reset/',
-                                                   reset_password_token.key)
+    email_plaintext_message = f"http://{FRONTEND_URL}/password_reset/?token={reset_password_token.key}"
+
+    html_content = render_to_string('password_reset.html', context={'reset_link': email_plaintext_message})
+
     send_mail(
         # title:
         "Password reset link",
@@ -76,5 +79,7 @@ def password_reset_token_created(sender, instance, reset_password_token, *args, 
         # from:
         EMAIL_HOST_USER,
         # to:
-        [reset_password_token.user.email]
+        [reset_password_token.user.email],
+        # email html content
+        html_message=html_content
     )
