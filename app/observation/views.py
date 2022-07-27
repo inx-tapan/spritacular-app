@@ -515,7 +515,6 @@ class ObservationVoteViewSet(APIView):
                     is_status_change = True
 
         if is_status_change:
-            print("status change")
             # Set is_to_be_verify flag to True.
             observation_obj.is_to_be_verify = True
             observation_obj.save(update_fields=['is_to_be_verify'])
@@ -531,13 +530,8 @@ class ObservationVerifyViewSet(APIView):
     permission_classes = (IsAuthenticated, IsAdmin)
 
     def post(self, request, *args, **kwargs):
-        observation_id = kwargs.get('pk')
+        observation_obj = get_object_or_404(Observation, pk=kwargs.get('pk'))
         data = request.data
-        try:
-            observation_obj = Observation.objects.get(id=observation_id)
-        except Observation.DoesNotExist as e:
-            capture_exception(e)
-            return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
 
         if data.get('name') == "APPROVE" and not observation_obj.is_verified:
             # Approved
@@ -545,9 +539,11 @@ class ObservationVerifyViewSet(APIView):
             observation_obj.is_reject = False
             observation_obj.verified_by = request.user
             observation_obj.save(update_fields=['is_verified', 'is_reject', 'verified_by'])
+
             # Send notification after observation approved
-            # generate_and_send_notification_data("Observation Approved", "Your observation is approved.",
-            #                                     observation_obj.user, request.user, observation_obj)
+            generate_and_send_notification_data("Observation Approved", "Your observation is approved.",
+                                                observation_obj.user, request.user, observation_obj, 'verified')
+
             return Response({'success': 'Observation Approved.'}, status=status.HTTP_200_OK)
 
         elif data.get('name') == "REJECT" and not observation_obj.is_reject:
@@ -560,14 +556,15 @@ class ObservationVerifyViewSet(APIView):
             if data.get('reason'):
                 reason_data = data.get('reason')
                 # Reason for reject
-                ObservationReasonForReject.objects.create(observation_id=observation_id,
+                ObservationReasonForReject.objects.create(observation=observation_obj,
                                                           inappropriate_image=reason_data.get('inappropriate_image'),
                                                           other=reason_data.get('other'),
                                                           additional_comment=reason_data.get('additional_comment',
                                                                                              None))
+
             # Send notification after observation rejected
-            # generate_and_send_notification_data("Observation Rejected", "Your observation is rejected.",
-            #                                     observation_obj.user, request.user, observation_obj)
+            generate_and_send_notification_data("Observation Rejected", "Your observation is rejected.",
+                                                observation_obj.user, request.user, observation_obj, 'denied')
             return Response({'success': 'Observation Rejected.'}, status=status.HTTP_200_OK)
 
         return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
