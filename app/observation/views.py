@@ -481,27 +481,22 @@ class ObservationVoteViewSet(APIView):
     permission_classes = (IsAuthenticated, IsAdminOrTrained)
 
     def post(self, request, *args, **kwargs):
-        observation_id = kwargs.get('pk')
+        observation_obj = get_object_or_404(Observation, pk=kwargs.get('pk'))
         data = request.data
-        try:
-            observation_obj = Observation.objects.get(id=observation_id)
-        except Observation.DoesNotExist as e:
-            capture_exception(e)
-            return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
-
         # Check if the user is not voting his/her created observation
         self.check_object_permissions(request, observation_obj)
+
         is_status_change = False
-        if VerifyObservation.objects.filter(observation_id=observation_id, user=request.user).exists():
+        if VerifyObservation.objects.filter(observation=observation_obj, user=request.user).exists():
             # If user have already voted atleast one TLE of the observation
             return Response({'success': 'You have already voted for this observation.', 'status': 1},
                             status=status.HTTP_200_OK)
 
         for user_vote in data.get('votes'):
-            if ObservationCategoryMapping.objects.filter(observation_id=observation_id,
+            if ObservationCategoryMapping.objects.filter(observation=observation_obj,
                                                          category_id=user_vote.get("category_id")).exists():
                 # If the observation have the TLE mapping
-                verify_obs_obj = VerifyObservation.objects.create(observation_id=observation_id, user=request.user,
+                verify_obs_obj = VerifyObservation.objects.create(observation=observation_obj, user=request.user,
                                                                   category_id=user_vote.get("category_id"),
                                                                   vote=user_vote.get("vote"))
 
@@ -509,15 +504,19 @@ class ObservationVoteViewSet(APIView):
                     # If an admin votes yes on any category of the observation it will send for verification.
                     is_status_change = True
 
-                if VerifyObservation.objects.filter(observation_id=observation_id,
+                if VerifyObservation.objects.filter(observation=observation_obj,
                                                     category_id=user_vote.get("category_id"), vote=True).count() > 3:
                     # If any category of the observation have more than 3 yes votes it will send for verification.
                     is_status_change = True
 
         if is_status_change:
             # Set is_to_be_verify flag to True.
-            observation_obj.is_to_be_verify = True
-            observation_obj.save(update_fields=['is_to_be_verify'])
+            observation_obj.is_verified = True
+            observation_obj.save(update_fields=['is_verified'])
+            # Send notification after observation approved
+            generate_and_send_notification_data("Observation Approved", "Your observation is approved.",
+                                                observation_obj.user, request.user, observation_obj, 'verified',
+                                                obs_images=[])
 
         return Response({'success': 'Successfully Voted.', 'status': 1}, status=status.HTTP_200_OK)
 
@@ -542,7 +541,8 @@ class ObservationVerifyViewSet(APIView):
 
             # Send notification after observation approved
             generate_and_send_notification_data("Observation Approved", "Your observation is approved.",
-                                                observation_obj.user, request.user, observation_obj, 'verified')
+                                                observation_obj.user, request.user, observation_obj, 'verified',
+                                                obs_images=[])
 
             return Response({'success': 'Observation Approved.'}, status=status.HTTP_200_OK)
 
@@ -566,7 +566,8 @@ class ObservationVerifyViewSet(APIView):
             # Send notification after observation rejected
             generate_and_send_notification_data("Observation Rejected",
                                                 reason_for_reject or "Your observation is rejected.",
-                                                observation_obj.user, request.user, observation_obj, 'denied')
+                                                observation_obj.user, request.user, observation_obj, 'denied',
+                                                obs_images=[])
 
             return Response({'success': 'Observation Rejected.'}, status=status.HTTP_200_OK)
 
