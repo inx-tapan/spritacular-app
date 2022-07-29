@@ -35,9 +35,10 @@ class UserNotificationViewSet(ListAPIView):
 
             for notif in page:
                 from_user_profile_pic = notif.from_user.profile_image.url if notif.from_user.profile_image else ""
-                obs_images_list = [obs_img_obj.image.url for obs_img_obj in ObservationImageMapping.objects.filter(
-                    observation=notif.observation)]
-                obs_images = ','.join(obs_images_list)
+                # obs_images_list = [obs_img_obj.image.url for obs_img_obj in ObservationImageMapping.objects.filter(
+                #     observation=notif.observation)]
+                # obs_images = ','.join(obs_images_list)
+                obs_images = ''
 
                 record = {
                     "data": {"from_user": f"{notif.from_user.first_name} {notif.from_user.last_name}",

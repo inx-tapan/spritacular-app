@@ -10,10 +10,10 @@ from observation.models import ObservationComment, VerifyObservation, Observatio
 
 def generate_and_send_notification_data(title, message, to_user, from_user, observation, notif_type):
     obs_images = ''
-    if notif_type in ['verified', 'denied']:
-        obs_images_list = [obs_img_obj.image.url for obs_img_obj in ObservationImageMapping.objects.filter(
-            observation=observation)]
-        obs_images = ','.join(obs_images_list)
+    # if notif_type in ['verified', 'denied']:
+    #     obs_images_list = [obs_img_obj.image.url for obs_img_obj in ObservationImageMapping.objects.filter(
+    #         observation=observation)]
+    #     obs_images = ','.join(obs_images_list)
 
     data = f"{message}"
     user = to_user  # To user
