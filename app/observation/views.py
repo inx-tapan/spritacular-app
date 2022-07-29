@@ -548,6 +548,7 @@ class ObservationVerifyViewSet(APIView):
 
         elif data.get('name') == "REJECT" and not observation_obj.is_reject:
             # Reject
+            reason_for_reject = None
             observation_obj.is_reject = True
             observation_obj.is_verified = False
             observation_obj.verified_by = request.user
@@ -561,10 +562,12 @@ class ObservationVerifyViewSet(APIView):
                                                           other=reason_data.get('other'),
                                                           additional_comment=reason_data.get('additional_comment',
                                                                                              None))
-
+                reason_for_reject = reason_data.get('additional_comment', None)
             # Send notification after observation rejected
-            generate_and_send_notification_data("Observation Rejected", "Your observation is rejected.",
+            generate_and_send_notification_data("Observation Rejected",
+                                                reason_for_reject or "Your observation is rejected.",
                                                 observation_obj.user, request.user, observation_obj, 'denied')
+
             return Response({'success': 'Observation Rejected.'}, status=status.HTTP_200_OK)
 
         return Response(SOMETHING_WENT_WRONG, status=status.HTTP_400_BAD_REQUEST)
