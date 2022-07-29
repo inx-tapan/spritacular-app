@@ -515,8 +515,7 @@ class ObservationVoteViewSet(APIView):
             observation_obj.save(update_fields=['is_verified'])
             # Send notification after observation approved
             generate_and_send_notification_data("Observation Approved", "Your observation is approved.",
-                                                observation_obj.user, request.user, observation_obj, 'verified',
-                                                obs_images="")
+                                                observation_obj.user, request.user, observation_obj, 'verified')
 
         return Response({'success': 'Successfully Voted.', 'status': 1, 'is_verified': is_status_change},
                         status=status.HTTP_200_OK)
@@ -542,8 +541,7 @@ class ObservationVerifyViewSet(APIView):
 
             # Send notification after observation approved
             generate_and_send_notification_data("Observation Approved", "Your observation is approved.",
-                                                observation_obj.user, request.user, observation_obj, 'verified',
-                                                obs_images="")
+                                                observation_obj.user, request.user, observation_obj, 'verified')
 
             return Response({'success': 'Observation Approved.'}, status=status.HTTP_200_OK)
 
@@ -567,8 +565,7 @@ class ObservationVerifyViewSet(APIView):
             # Send notification after observation rejected
             generate_and_send_notification_data("Observation Rejected",
                                                 reason_for_reject or "Your observation is rejected.",
-                                                observation_obj.user, request.user, observation_obj, 'denied',
-                                                obs_images="")
+                                                observation_obj.user, request.user, observation_obj, 'denied')
 
             return Response({'success': 'Observation Rejected.'}, status=status.HTTP_200_OK)
 
