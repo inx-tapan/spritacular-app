@@ -10,8 +10,9 @@ from observation.models import ObservationComment, VerifyObservation, Observatio
 
 def generate_and_send_notification_data(title, message, to_user, from_user, observation, notif_type, obs_images=None):
     if notif_type in ['verified', 'denied']:
-        for obs_img_obj in ObservationImageMapping.objects.filter(observation=observation):
-            obs_images.append(obs_img_obj.image.url)
+        obs_images_list = [obs_img_obj.image.url for obs_img_obj in ObservationImageMapping.objects.filter(
+            observation=observation)]
+        obs_images = ','.join(obs_images_list)
 
     data = f"{message}"
     user = to_user  # To user
@@ -31,14 +32,14 @@ def generate_and_send_notification_data(title, message, to_user, from_user, obse
 @receiver(post_save, sender=ObservationComment)
 def create_notification(sender, instance, created, **kwargs):
     generate_and_send_notification_data("New comments", instance.text, instance.observation.user, instance.user,
-                                        instance.observation, 'message', obs_images=[])
+                                        instance.observation, 'message', obs_images="")
 
 
 @receiver(post_save, sender=VerifyObservation)
 def create_notification(sender, instance, created, **kwargs):
     message = f"{instance.user.first_name} votes your {instance.category.title} observation."
     generate_and_send_notification_data("New Vote", message, instance.observation.user, instance.user,
-                                        instance.observation, 'message', obs_images=[])
+                                        instance.observation, 'message', obs_images="")
 
 
 def send_notification_user(title, data, notification, sent_at, user, from_user, notif_type, obs_images=None):

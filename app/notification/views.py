@@ -31,16 +31,13 @@ class UserNotificationViewSet(ListAPIView):
             notifications = UserNotification.objects.filter(user=request.user, read=False).order_by('sent_at')
 
             page = self.paginate_queryset(notifications)
-            print(page)
-
             user_notification_data = []
 
             for notif in page:
-                obs_images = []
                 from_user_profile_pic = notif.from_user.profile_image.url if notif.from_user.profile_image else ""
-
-                for obs_img_obj in ObservationImageMapping.objects.filter(observation=notif):
-                    obs_images.append(obs_img_obj.image.url)
+                obs_images_list = [obs_img_obj.image.url for obs_img_obj in ObservationImageMapping.objects.filter(
+                    observation=notif.observation)]
+                obs_images = ','.join(obs_images_list)
 
                 record = {
                     "data": {"from_user": f"{notif.from_user.first_name} {notif.from_user.last_name}",
