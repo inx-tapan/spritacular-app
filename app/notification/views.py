@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from notification.models import UserNotification
+from observation.models import ObservationImageMapping
 
 
 class NotificationPagination(pagination.PageNumberPagination):
@@ -30,15 +31,21 @@ class UserNotificationViewSet(ListAPIView):
             notifications = UserNotification.objects.filter(user=request.user, read=False).order_by('sent_at')
 
             page = self.paginate_queryset(notifications)
+            print(page)
 
             user_notification_data = []
 
             for notif in page:
+                obs_images = []
                 from_user_profile_pic = notif.from_user.profile_image.url if notif.from_user.profile_image else ""
+
+                for obs_img_obj in ObservationImageMapping.objects.filter(observation=notif):
+                    obs_images.append(obs_img_obj.image.url)
+
                 record = {
                     "data": {"from_user": f"{notif.from_user.first_name} {notif.from_user.last_name}",
                              "sent_at": str(notif.sent_at), "notification_id": notif.notification.id,
-                             "from_user_profile_pic": from_user_profile_pic},
+                             "from_user_profile_pic": from_user_profile_pic, 'obs_images': obs_images},
                     "notification": {
                         "body": notif.notification.message,
                         "title": notif.notification.title

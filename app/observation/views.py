@@ -518,7 +518,8 @@ class ObservationVoteViewSet(APIView):
                                                 observation_obj.user, request.user, observation_obj, 'verified',
                                                 obs_images=[])
 
-        return Response({'success': 'Successfully Voted.', 'status': 1}, status=status.HTTP_200_OK)
+        return Response({'success': 'Successfully Voted.', 'status': 1, 'is_verified': is_status_change},
+                        status=status.HTTP_200_OK)
 
 
 class ObservationVerifyViewSet(APIView):
