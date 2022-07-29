@@ -72,7 +72,7 @@ class ObservationImageMapping(BaseModel):
 
 class ObservationReasonForReject(BaseModel):
     observation = models.ForeignKey(Observation, on_delete=models.CASCADE)
-    additional_comment = models.CharField(max_length=200, null=True, blank=True)
+    additional_comment = models.TextField(default='', blank=True)
     inappropriate_image = models.BooleanField(default=False)
     other = models.BooleanField(default=False)
 
