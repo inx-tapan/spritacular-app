@@ -10,8 +10,7 @@ services:
     volumes:
       - .:/usr/src/app/
     command: >
-      sh -c "python3 manage.py makemigrations &&
-             python3 manage.py migrate --run-syncdb &&
+      sh -c "python3 manage.py migrate &&
              python3 manage.py runserver 0.0.0.0:8000"
 
     env_file:
