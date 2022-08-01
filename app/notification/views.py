@@ -28,7 +28,7 @@ class UserNotificationViewSet(ListAPIView):
         if not request.user.is_authenticated:
             return Response({}, status=status.HTTP_200_OK)
         else:
-            notifications = UserNotification.objects.filter(user=request.user, read=False).order_by('sent_at')
+            notifications = UserNotification.objects.filter(user=request.user, read=False).order_by('-sent_at')
 
             page = self.paginate_queryset(notifications)
             user_notification_data = []
