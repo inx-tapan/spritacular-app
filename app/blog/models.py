@@ -68,12 +68,12 @@ class ContentManagement(models.Model):
 
 
 class MeetTheTeam(models.Model):
-    name = models.CharField(max_length=200)
+    title = models.CharField(max_length=200)
     url = models.CharField(max_length=200, null=True, blank=True)
     organization = models.CharField(max_length=200)
     role = models.CharField(max_length=200)
-    description = models.TextField()
-    image = models.ImageField(upload_to='spritacular_team')
+    content = models.TextField()
+    thumbnail_image = models.ImageField(upload_to='spritacular_team')
 
     def __str__(self):
-        return f"{self.name}"
+        return f"{self.title}"
