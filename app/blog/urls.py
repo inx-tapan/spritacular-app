@@ -16,15 +16,5 @@ urlpatterns = [
     # Upload Image
     path('upload/', GetImageUrlViewSet.as_view({'post': 'create'}), name="upload"),
     # path('destroy/<int:pk>/', GetImageUrlViewSet.as_view({'delete': 'destroy'}), name="destroy")
-    # List spritacular team
-    path('list_team/', MeetTheTeamViewSet.as_view({'get': 'list'}, name='list_team')),
-    # Meet the team create
-    path('add_team_member/', MeetTheTeamViewSet.as_view({'post': 'create'}, name='add_team_member')),
-    # Meet the team update
-    path('update_team_member/<int:pk>/', MeetTheTeamViewSet.as_view({'put': 'update'}, name='update_team_member')),
-    # Meet the team retrieve
-    path('get_team_member/<int:pk>/', MeetTheTeamViewSet.as_view({'get': 'retrieve'}, name='get_team_member')),
-    # Meet the team delete
-    path('delete_team_member/<int:pk>/', MeetTheTeamViewSet.as_view({'delete': 'destroy'}, name='delete_team_member')),
 ]
 
