@@ -9,7 +9,8 @@ from users.permissions import IsAdmin
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from blog.models import BlogCategory, Blog, BlogImageData, ContentManagement
+from .models import BlogCategory, Blog, BlogImageData, ContentManagement, MeetTheTeam
+from .serializers import MeetTheTeamSerializer
 
 
 class BlogCategoryListViewSet(APIView):
@@ -243,6 +244,24 @@ class ContentManagementViewSet(viewsets.ModelViewSet):
         content_obj.save(update_fields=['title', 'content'])
 
         return Response({'title': content_obj.title, 'content': content_obj.content}, status=status.HTTP_200_OK)
+
+
+class MeetTheTeamViewSet(viewsets.ModelViewSet):
+    """
+    Meet the team page api for dynamic content.
+    CRUD operations
+    """
+    serializer_class = MeetTheTeamSerializer
+    pagination_class = None
+
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated, IsAdmin] if self.action in ['post', 'put', 'delete'] else []
+        return [permission() for permission in permission_classes]
+
+    def get_queryset(self):
+        return MeetTheTeam.objects.all()
+
+
 
 
 

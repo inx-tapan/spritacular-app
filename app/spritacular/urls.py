@@ -6,7 +6,7 @@ from django.conf.urls.static import static
 from django.views.static import serve
 from fcm_django.api.rest_framework import FCMDeviceAuthorizedViewSet
 from users.views import RootView
-from blog.views import ContentManagementViewSet
+from blog.views import ContentManagementViewSet, MeetTheTeamViewSet
 
 urlpatterns = [
     path('', RootView.as_view(), name='root_view'),
@@ -24,6 +24,17 @@ urlpatterns = [
     path('api/quiz/', include('quiz.urls')),
     path('api/<str:page>/', ContentManagementViewSet.as_view({'post': 'create', 'put': 'update', 'get': 'list'}),
          name='content_management'),
+    # List spritacular team
+    path('api/team/list_team/', MeetTheTeamViewSet.as_view({'get': 'list'}, name='list_team')),
+    # Meet the team CRUD urls start
+    path('api/team/add_team_member/', MeetTheTeamViewSet.as_view({'post': 'create'}, name='add_team_member')),
+    path('api/team/update_team_member/<int:pk>/', MeetTheTeamViewSet.as_view({'put': 'update'}),
+         name='update_team_member'),
+    path('api/team/get_team_member/<int:pk>/', MeetTheTeamViewSet.as_view({'get': 'retrieve'}),
+         name='get_team_member'),
+    path('api/team/delete_team_member/<int:pk>/', MeetTheTeamViewSet.as_view({'delete': 'destroy'}),
+         name='delete_team_member'),
+    # Meet the team CRUD urls end
     url(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT})
 ]
 
