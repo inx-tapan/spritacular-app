@@ -181,9 +181,9 @@ class ObservationSerializer(serializers.ModelSerializer):
                     is_error_flag = True
                     error_field[count]['azimuth'] = FIELD_REQUIRED.format("Azimuth")
 
-                elif (obs_data['azimuth'] and obs_data['azimuth'].isdigit()) and int(obs_data['azimuth']) > 360:
-                    is_error_flag = True
-                    error_field[count]['azimuth'] = 'Azimuth angle should not be more than 360°.'
+                # elif (obs_data['azimuth'] and obs_data['azimuth'].isdigit()) and int(obs_data['azimuth']) > 360:
+                #     is_error_flag = True
+                #     error_field[count]['azimuth'] = 'Azimuth angle should not be more than 360°.'
 
             if is_error_flag:
                 raise serializers.ValidationError(error_field, code=400)
