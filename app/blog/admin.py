@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Blog, BlogImageData, BlogCategory, ContentManagement
+from .models import Blog, BlogImageData, BlogCategory, ContentManagement, MeetTheTeam
 
 
 @admin.register(Blog)
@@ -32,3 +32,11 @@ class ContentManagementDataAdmin(admin.ModelAdmin):
     Customizing admin view of ContentManagement Table
     """
     list_display = ('id', 'title')
+
+
+@admin.register(MeetTheTeam)
+class MeetTheTeamDataAdmin(admin.ModelAdmin):
+    """
+    Customizing admin view of ContentManagement Table
+    """
+    list_display = ('id', 'title', 'organization', 'role')
