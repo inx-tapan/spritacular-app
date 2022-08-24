@@ -65,3 +65,15 @@ class ContentManagement(models.Model):
 
     def __str__(self):
         return f"{self.title}"
+
+
+class MeetTheTeam(models.Model):
+    title = models.CharField(max_length=200)
+    url = models.CharField(max_length=200, null=True, blank=True)
+    organization = models.CharField(max_length=200)
+    role = models.CharField(max_length=200)
+    content = models.TextField()
+    thumbnail_image = models.ImageField(upload_to='spritacular_team')
+
+    def __str__(self):
+        return f"{self.title}"

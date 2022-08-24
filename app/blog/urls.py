@@ -1,6 +1,5 @@
 from django.urls import path
-from .views import BlogViewSet, GetImageUrlViewSet, BlogCategoryListViewSet
-
+from .views import BlogViewSet, GetImageUrlViewSet, BlogCategoryListViewSet, MeetTheTeamViewSet
 urlpatterns = [
     # List of blog category
     path('get_blog_category_list/', BlogCategoryListViewSet.as_view(), name='get_blog_category_list'),
@@ -18,3 +17,4 @@ urlpatterns = [
     path('upload/', GetImageUrlViewSet.as_view({'post': 'create'}), name="upload"),
     # path('destroy/<int:pk>/', GetImageUrlViewSet.as_view({'delete': 'destroy'}), name="destroy")
 ]
+
